@@ -133,8 +133,8 @@ Notas:
 - [x] Documentar el pipeline RAG, la seguridad y la estrategia de testing.
 - [x] Definir estructura de carpetas y stack.
 - [x] Crear el roadmap por etapas.
-- [ ] Crear `.gitignore` y `.env.example`, e inicializar el repositorio Git (`git init`).
-- [ ] Definir el destino de despliegue o dejar la comparativa documentada (decisión diferida a Etapa 10).
+- [x] Crear `.gitignore` y `.env.example`, e inicializar el repositorio Git (`git init`).
+- [x] Definir el destino de despliegue o dejar la comparativa documentada (decisión diferida a Etapa 10, ver ADR-013).
 
 ### Entregables
 

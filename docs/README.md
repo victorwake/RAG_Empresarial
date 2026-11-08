@@ -2,7 +2,7 @@
 
 Índice de la documentación técnica y funcional del proyecto.
 
-> **Estado:** Etapa 1 — planificación. Los documentos son **vivos**: se actualizan al cerrar cada etapa.
+> **Estado:** Etapa 1 cerrada — Etapa 2 en curso. Los documentos son **vivos**: se actualizan al cerrar cada etapa.
 >
 > Las decisiones que dependen de experimentación están marcadas como **“a validar en Etapa 5”** y no deben tratarse como valores definitivos.
 
