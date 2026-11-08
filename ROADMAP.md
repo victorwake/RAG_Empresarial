@@ -164,27 +164,27 @@ Contar con planificación técnica clara, documentación coherente y entorno de 
 
 ### Tareas
 
-- [ ] Crear proyecto Python 3.12 con `uv` (`pyproject.toml`, `uv.lock`) y `requirements.txt` de respaldo.
-- [ ] Configurar Ruff (lint + format) y reglas de estilo.
-- [ ] Configurar FastAPI con `app/main.py` y estructura modular.
-- [ ] Configurar `pydantic-settings` y `.env.example`.
-- [ ] Levantar PostgreSQL 16 con pgvector vía Docker Compose.
-- [ ] Configurar SQLAlchemy 2.0 async y sesión por request.
-- [ ] Inicializar Alembic y crear la migración base.
-- [ ] Crear modelos de `Organization`, `User`, `RefreshToken` y enums asociados.
-- [ ] Implementar autenticación básica: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` y derivación de `organization_slug`/tenant.
-- [ ] Emitir access token JWT de corta duración y refresh token rotativo y revocable.
-- [ ] Implementar `TenantContext` y dependencias de autenticación/tenant.
-- [ ] Implementar aprovisionamiento inicial (comando CLI) para crear organización y administrador.
-- [ ] Configurar Argon2id para hashes de contraseñas y política mínima de longitud.
-- [ ] Implementar endpoint de health check con verificación de base de datos.
-- [ ] Configurar logging estructurado y request ID.
-- [ ] Configurar manejo global de excepciones.
-- [ ] Configurar Swagger/OpenAPI (`/docs`, `/redoc`, `/openapi.json`).
-- [ ] Crear `Dockerfile` multi-stage del backend.
-- [ ] Crear `docker-compose.yml` con API y base de datos.
-- [ ] Configurar pytest y un test de health check.
-- [ ] `git init` y primer commit.
+- [x] Crear proyecto Python 3.12 con `uv` (`pyproject.toml`, `uv.lock`) y `requirements.txt` de respaldo.
+- [x] Configurar Ruff (lint + format) y reglas de estilo.
+- [x] Configurar FastAPI con `app/main.py` y estructura modular.
+- [x] Configurar `pydantic-settings` y `.env.example`.
+- [x] Levantar PostgreSQL 16 con pgvector vía Docker Compose.
+- [x] Configurar SQLAlchemy 2.0 async y sesión por request.
+- [x] Inicializar Alembic y crear la migración base.
+- [x] Crear modelos de `Organization`, `User`, `RefreshToken` y enums asociados.
+- [x] Implementar autenticación básica: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` y derivación de `organization_slug`/tenant.
+- [x] Emitir access token JWT de corta duración y refresh token rotativo y revocable.
+- [x] Implementar `TenantContext` y dependencias de autenticación/tenant.
+- [x] Implementar aprovisionamiento inicial (comando CLI) para crear organización y administrador.
+- [x] Configurar Argon2id para hashes de contraseñas y política mínima de longitud.
+- [x] Implementar endpoint de health check con verificación de base de datos.
+- [x] Configurar logging estructurado y request ID.
+- [x] Configurar manejo global de excepciones.
+- [x] Configurar Swagger/OpenAPI (`/docs`, `/redoc`, `/openapi.json`).
+- [x] Crear `Dockerfile` multi-stage del backend.
+- [x] Crear `docker-compose.yml` con API y base de datos.
+- [x] Configurar pytest y un test de health check.
+- [x] `git init` y primer commit.
 
 ### Estructura inicial
 
@@ -232,8 +232,8 @@ backend/
 
 ### A validar en esta etapa
 
-- Versión exacta de la imagen `pgvector/pgvector`.
-- Estrategia de ejecución de migraciones al arrancar (script de entrada o comando de release).
+- Versión exacta de la imagen `pgvector/pgvector`: se usa la etiqueta `pgvector/pgvector:pg16`.
+- Estrategia de ejecución de migraciones al arrancar (script de entrada o comando de release): por ahora se ejecutan explícitamente con `alembic upgrade head` antes de levantar la API.
 
 ---
 
