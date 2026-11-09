@@ -539,6 +539,8 @@ Notas:
 0005_conversations_messages_message_sources
 ```
 
+**Estado Etapa 2:** `0001` y `0002` implementadas y verificadas. Las migraciones `0003`–`0005` se crean en Etapas 3–6.
+
 ### Cambio de modelo de embeddings
 
 Si cambia `EMBEDDING_MODEL` o `EMBEDDING_DIMENSION`:

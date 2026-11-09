@@ -2,6 +2,8 @@
 
 Plan de desarrollo incremental en 10 etapas. Cada etapa debe producir un resultado funcional y verificable antes de avanzar a la siguiente.
 
+> **Estado actual:** Etapas 1 y 2 cerradas; próxima Etapa 3. Verificación y punto de reanudación: [`docs/status.md`](docs/status.md).
+
 - **Duración estimada total:** 15 semanas.
 - **Ritmo asumido:** 5–7 horas semanales, desarrollo individual.
 - **Prioridad:** funcionalidades completas y verificables por encima del calendario.

@@ -117,10 +117,13 @@ Ninguna capa inferior importa capas superiores.
 
 ## 4. Estructura modular del backend
 
+> **Estado:** este árbol es la estructura objetivo. La tabla de implementación al final de la sección indica qué existe al cerrar la Etapa 2 y qué se incorpora en etapas posteriores.
+
 ```text
 backend/
 ├── app/
 │   ├── api/
+│   │   ├── router.py
 │   │   ├── dependencies.py
 │   │   └── routes/
 │   │       ├── auth.py
@@ -139,6 +142,7 @@ backend/
 │   │   ├── session.py
 │   │   └── base.py
 │   ├── models/
+│   │   ├── enums.py
 │   │   ├── organization.py
 │   │   ├── user.py
 │   │   ├── refresh_token.py
@@ -157,7 +161,9 @@ backend/
 │   │   └── common.py
 │   ├── repositories/
 │   │   ├── base.py
+│   │   ├── organization_repository.py
 │   │   ├── user_repository.py
+│   │   ├── refresh_token_repository.py
 │   │   ├── document_repository.py
 │   │   ├── chunk_repository.py
 │   │   ├── conversation_repository.py
@@ -190,12 +196,38 @@ backend/
 │   ├── main.py
 │   └── cli.py
 ├── migrations/
+│   └── versions/
+│       ├── 0001_extensions_y_organizations.py
+│       └── 0002_users_y_refresh_tokens.py
 ├── tests/
+│   ├── conftest.py
+│   ├── unit/
+│   ├── integration/
+│   └── security/
+├── alembic.ini
 ├── pyproject.toml
+├── uv.lock
 ├── requirements.txt
 ├── Dockerfile
+├── .dockerignore
 └── .env.example
 ```
+
+### 4.1. Estado de implementación al cerrar la Etapa 2
+
+| Área | Implementado |
+|---|---|
+| API | `app/main.py`, `app/api/router.py`, `app/api/routes/auth.py`, `app/api/routes/health.py`, `app/api/dependencies.py` |
+| Core | `config.py`, `logging.py`, `security.py`, `exceptions.py`, `context.py` |
+| Base de datos | `app/database/session.py`, `app/database/base.py`, `alembic.ini`, `migrations/env.py` |
+| Modelos | `Organization`, `User`, `RefreshToken`, `enums.py` |
+| Repositorios | `organization_repository.py`, `user_repository.py`, `refresh_token_repository.py` |
+| Servicios y schemas | `auth_service.py`, `schemas/auth.py`, `schemas/user.py` |
+| CLI | `app/cli.py` con `create-organization` y `create-admin` |
+| Tests | `conftest.py`, `unit/test_security_utils.py`, `integration/test_auth.py`, `security/test_tenant_isolation.py` |
+| Infraestructura | `Dockerfile`, `docker-compose.yml`, `docker/postgres/init-test-db.sql` |
+
+Pendiente para etapas posteriores: rutas de usuarios/documentos/conversaciones/admin, modelos y repositorios documentales, interfaces de storage/queue/extractores, pipeline RAG, frontend y proxy de despliegue.
 
 ---
 
@@ -433,12 +465,18 @@ Configuración mediante variables de entorno y `pydantic-settings`.
 | `APP_ENV` | Entorno | `development` |
 | `APP_NAME` | Nombre | `SmartDocs AI` |
 | `API_V1_PREFIX` | Prefijo de API | `/api/v1` |
-| `DATABASE_URL` | Conexión async | `postgresql+asyncpg://...` |
+| `DATABASE_URL` | Conexión async de la API | `postgresql+asyncpg://...` |
+| `DATABASE_TEST_URL` | Conexión async de la suite de tests | `postgresql+asyncpg://.../smartdocs_test` |
+| `POSTGRES_DB` | Base de datos del contenedor | `smartdocs` |
+| `POSTGRES_USER` | Usuario del contenedor | `smartdocs` |
+| `POSTGRES_PASSWORD` | Contraseña del contenedor | secreto |
+| `CORS_ORIGINS` | Orígenes permitidos, separados por coma | `http://localhost:5173` |
 | `JWT_SECRET` | Secreto de firma | obligatorio |
 | `JWT_ALGORITHM` | Algoritmo | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Expiración access | `15` |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | Expiración refresh | `7` |
-| `FILE_STORAGE_ROOT` | Raíz de archivos | `/data/uploads` |
+| `PASSWORD_MIN_LENGTH` | Longitud mínima de contraseña | `12` |
+| `FILE_STORAGE_ROOT` | Raíz de archivos | `./data/uploads` |
 | `MAX_UPLOAD_MB` | Tamaño máximo | `25` |
 | `ALLOWED_EXTENSIONS` | Extensiones | `pdf,docx,txt` |
 | `EMBEDDING_PROVIDER` | Proveedor | `gemini` |

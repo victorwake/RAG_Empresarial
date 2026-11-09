@@ -26,6 +26,8 @@ Registro de decisiones estructurales, su contexto, consecuencias y estado.
 | [ADR-012](#adr-012-contenido-documental-como-dato-no-confiable) | Contenido documental como dato no confiable | Aceptada |
 | [ADR-013](#adr-013-decisión-de-hosting-diferida) | Decisión de hosting diferida | Diferida |
 | [ADR-014](#adr-014-python-312--uv--ruff) | Python 3.12 + uv + Ruff | Aceptada |
+| [ADR-015](#adr-015-login-con-organization_slug-y-claves-foráneas-compuestas) | Login con `organization_slug` y claves foráneas compuestas | Aceptada |
+| [ADR-016](#adr-016-esquema-de-tests-con-create_all-y-migraciones-verificadas-aparte) | Esquema de tests con `create_all` y migraciones verificadas aparte | Aceptada |
 
 ---
 
@@ -448,6 +450,35 @@ El modelo `UNIQUE (organization_id, email)` permite emails duplicados entre orga
 
 - Hacer el email único globalmente: más simple, pero menos flexible para organizaciones existentes.
 - Resolver por email únicamente: ambiguo con el esquema propuesto.
+
+---
+
+## ADR-016: Esquema de tests con `create_all` y migraciones verificadas aparte
+
+**Estado:** Aceptada.
+
+**Contexto:**
+
+La suite de integración necesita una base PostgreSQL real y un esquema limpio para cada ejecución. Aplicar todas las migraciones de Alembic antes de cada suite agrega tiempo y acopla el aislamiento de los tests al historial de migraciones. Aun así, las migraciones deben validarse por separado para detectar divergencias con los modelos.
+
+**Decisión:**
+
+- Crear y eliminar el esquema de la base `smartdocs_test` con `Base.metadata.create_all` / `drop_all` al inicio y al final de la sesión de tests.
+- Aislar cada test con una transacción y rollback.
+- Verificar las migraciones por separado contra una base vacía: `alembic upgrade head`, `alembic downgrade base` y `alembic upgrade head`.
+- Mantener `docker/postgres/init-test-db.sql` para crear la base de tests en el contenedor.
+
+**Consecuencias:**
+
+- Suite más rápida y estable para el desarrollo diario.
+- Los tests no detectan por sí solos divergencias entre modelos y migraciones; la verificación explícita de Alembic cubre ese riesgo.
+- El esquema de tests puede diferir temporalmente del esquema migrado si se olvida ejecutar la verificación de migraciones.
+
+**Alternativas consideradas:**
+
+- Aplicar migraciones en cada sesión de tests: más fiel al esquema real, pero más lento y frágil ante fallos de migración.
+- SQLite en memoria: descartado por falta de `vector`, `citext` y comportamiento real de PostgreSQL.
+- `testcontainers`: útil en CI, pero agrega complejidad innecesaria para el entorno local actual.
 
 ---
 

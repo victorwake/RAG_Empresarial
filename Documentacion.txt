@@ -1,3 +1,9 @@
+> **DOCUMENTO HISTÓRICO — NO MANTENER**
+>
+> Este archivo conserva la visión inicial del proyecto y puede estar desactualizado.
+> La fuente de verdad es [`README.md`](README.md), [`ROADMAP.md`](ROADMAP.md) y la documentación viva en [`docs/`](docs/README.md).
+> Estado actual y punto de reanudación: [`docs/status.md`](docs/status.md).
+
 # PROYECTO: RAG Empresarial
 ## Sistema inteligente de consultas sobre documentación corporativa
 

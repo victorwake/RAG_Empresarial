@@ -8,6 +8,8 @@ Preparación del sistema para ejecutarse fuera del entorno local.
 - **Decisión de hosting:** diferida a la Etapa 10 (comparativa al final).
 - **Principio:** no asumir que un servicio gratuito permite Docker o pgvector persistente.
 
+> **Estado Etapa 2:** Dockerfile y Docker Compose ya existen y están verificados en local. La API y PostgreSQL funcionan; el proxy TLS, el frontend y la cola durable quedan para etapas posteriores. La topología de esta sección es el objetivo de producción, no la composición actual.
+
 ---
 
 ## 1. Topología objetivo
@@ -37,27 +39,23 @@ Servicios mínimos:
 
 ### 2.1. Backend
 
-Características del `Dockerfile`:
+El `backend/Dockerfile` actual implementa:
 
-- Multi-stage: build de dependencias y runtime mínimo.
-- Usuario no root.
-- Sin secretos embebidos.
-- Variables de entorno en runtime.
-- `HEALTHCHECK` contra `/health`.
-- Migraciones ejecutadas en un paso controlado (entrypoint o comando de release).
+- Multi-stage: `builder` con `uv` y `runtime` sobre `python:3.12-slim`.
+- Usuario no root (`app`) y directorio de trabajo `/app`.
+- Sin secretos embebidos; variables de entorno en runtime.
+- `HEALTHCHECK` contra `http://127.0.0.1:8000/health`.
+- `uv sync --no-dev --no-install-project` para instalar dependencias desde `uv.lock`.
+- Copia de `app/`, `migrations/` y `alembic.ini`.
+- `CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]`.
 
-Esquema esperado:
+Build local:
 
-```dockerfile
-FROM python:3.12-slim AS builder
-# instalar uv y dependencias
-
-FROM python:3.12-slim AS runtime
-# copiar entorno, crear usuario, exponer 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```bash
+docker compose build api
 ```
 
-### 2.2. Frontend
+### 2.2. Frontend (Etapa 7)
 
 - Build con Vite (`pnpm build`).
 - Servir estáticos con el proxy o un servidor dedicado.
@@ -65,58 +63,23 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 ### 2.3. Docker Compose
 
-Servicios y dependencias:
+El `docker-compose.yml` actual de la Etapa 2 define:
 
-- `db` con volumen persistente y healthcheck (`pg_isready`).
-- `api` dependiente de `db` saludable.
-- `proxy` con TLS y rutas.
-- Red interna; solo el proxy expuesto.
+- `db`: `pgvector/pgvector:pg16`, volumen `postgres_data`, healthcheck con `pg_isready` y script `docker/postgres/init-test-db.sql` que crea `smartdocs_test`.
+- `api`: build desde `./backend`, `env_file: .env` opcional, `DATABASE_URL` apuntando al servicio `db`, volumen `./data/uploads:/app/data/uploads` y dependencia de `db` saludable.
+- No incluye `proxy` ni `frontend`; se agregan en etapas posteriores.
+- PostgreSQL expone `5432` y la API `8000` en local.
 
-Ejemplo conceptual:
+Comandos:
 
-```yaml
-services:
-  db:
-    image: pgvector/pgvector:pg16
-    environment:
-      POSTGRES_DB: smartdocs
-      POSTGRES_USER: smartdocs
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smartdocs -d smartdocs"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  api:
-    build: ./backend
-    env_file: .env
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - uploads:/data/uploads
-
-  proxy:
-    image: caddy:2
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-    depends_on:
-      - api
-
-volumes:
-  pgdata:
-  uploads:
-  caddy_data:
+```bash
+docker compose up -d db
+docker compose run --rm api alembic upgrade head
+docker compose up -d --build api
+curl http://localhost:8000/health
 ```
 
-> El archivo definitivo se crea en la Etapa 10. Este ejemplo fija la intención arquitectónica.
+> La composición de producción (proxy TLS, frontend, red interna, backups) se define en la Etapa 10.
 
 ---
 
@@ -151,6 +114,8 @@ Opciones:
 
 1. **Entrypoint:** aplicar migraciones antes de iniciar Uvicorn. Simple, adecuado para una instancia.
 2. **Paso de release:** ejecutar `alembic upgrade head` como comando separado antes de desplegar. Preferible en producción.
+
+En la Etapa 2 se usa la opción 2: las migraciones se ejecutan explícitamente antes de levantar la API (`docker compose run --rm api alembic upgrade head`). El entrypoint automático queda como decisión futura.
 
 Reglas:
 
