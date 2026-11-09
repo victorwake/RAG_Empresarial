@@ -1,0 +1,1061 @@
+> **DOCUMENTO HISTÓRICO — NO MANTENER**
+>
+> Este archivo conserva la visión inicial del proyecto y puede estar desactualizado.
+> La fuente de verdad es [`README.md`](README.md), [`ROADMAP.md`](ROADMAP.md) y la documentación viva en [`docs/`](docs/README.md).
+> Estado actual y punto de reanudación: [`docs/status.md`](docs/status.md).
+
+# PROYECTO: RAG Empresarial
+## Sistema inteligente de consultas sobre documentación corporativa
+
+**Nombre provisional:** SmartDocs AI  
+**Tipo de proyecto:** Aplicación web empresarial con Inteligencia Artificial Generativa  
+**Objetivo:** Desarrollar una plataforma que permita a las empresas consultar su documentación interna mediante lenguaje natural, obteniendo respuestas contextualizadas, precisas y respaldadas por fuentes documentales.
+
+---
+
+# 1. VISIÓN GENERAL DEL PROYECTO
+
+## 1.1. Descripción
+
+SmartDocs AI será una plataforma de consulta inteligente de documentación empresarial basada en arquitectura RAG (Retrieval-Augmented Generation).
+
+El sistema permitirá cargar documentos corporativos en diferentes formatos, procesarlos automáticamente, indexar su contenido y ponerlo a disposición de un asistente conversacional capaz de responder preguntas utilizando exclusivamente la información recuperada de esos documentos.
+
+A diferencia de un chatbot tradicional, que genera respuestas basándose en su conocimiento general, este sistema buscará información dentro de una base documental específica antes de generar cada respuesta.
+
+Por ejemplo, una empresa podrá cargar:
+
+- Manuales de procedimientos.
+- Reglamentos internos.
+- Documentación técnica.
+- Políticas de recursos humanos.
+- Manuales de atención al cliente.
+- Contratos y documentación administrativa.
+- Documentación de productos y servicios.
+- Preguntas frecuentes.
+
+Un empleado podrá consultar:
+
+"¿Cuántos días de vacaciones corresponden a un empleado con cinco años de antigüedad?"
+
+El sistema buscará la información relevante en los documentos cargados, identificará los fragmentos relacionados y generará una respuesta basada en ese contenido.
+
+La respuesta deberá incluir referencias a los documentos utilizados, permitiendo verificar su procedencia.
+
+## 1.2. Problema que busca resolver
+
+En muchas organizaciones, la información se encuentra distribuida en archivos PDF, documentos Word, hojas de cálculo y otros formatos.
+
+Esto genera diferentes inconvenientes:
+
+- Los empleados pierden tiempo buscando información.
+- Existen documentos duplicados o versiones diferentes.
+- La información no siempre está centralizada.
+- Las consultas frecuentes consumen tiempo del personal.
+- Los empleados pueden desconocer dónde encontrar determinados procedimientos.
+- Los procesos de incorporación de nuevos empleados requieren capacitación constante.
+
+El proyecto busca reducir estos problemas mediante una interfaz conversacional que permita acceder rápidamente al conocimiento institucional.
+
+## 1.3. Objetivos principales
+
+1. Centralizar la documentación empresarial.
+2. Automatizar la extracción y procesamiento de información.
+3. Permitir consultas utilizando lenguaje natural.
+4. Generar respuestas contextualizadas mediante modelos de lenguaje.
+5. Proporcionar referencias verificables de las respuestas.
+6. Reducir las respuestas incorrectas o inventadas por la IA.
+7. Administrar documentos, usuarios y permisos.
+8. Construir una arquitectura escalable que permita incorporar nuevas funcionalidades.
+
+## 1.4. Objetivos técnicos y de aprendizaje
+
+El desarrollo permitirá trabajar con:
+
+- Python aplicado al desarrollo de software.
+- FastAPI y construcción de APIs REST.
+- Inteligencia Artificial Generativa.
+- Large Language Models (LLMs).
+- Arquitecturas RAG.
+- Embeddings y búsqueda semántica.
+- Bases de datos vectoriales.
+- Procesamiento de documentos.
+- Prompt Engineering.
+- Integración con servicios externos de IA.
+- Autenticación y autorización.
+- Testing automatizado.
+- Docker y despliegue de aplicaciones.
+
+---
+
+# 2. ALCANCE FUNCIONAL
+
+El sistema estará dividido en dos áreas principales:
+
+## 2.1. Panel administrativo
+
+Permitirá a los administradores gestionar la información y controlar el funcionamiento de la plataforma.
+
+Funcionalidades:
+
+**Gestión de documentos**
+- Subir archivos PDF, DOCX y TXT.
+- Consultar documentos cargados.
+- Visualizar el estado de procesamiento.
+- Eliminar documentos.
+- Reprocesar documentos.
+- Consultar fecha de carga y última actualización.
+- Identificar documentos duplicados.
+
+**Gestión de usuarios**
+- Registrar usuarios.
+- Iniciar y cerrar sesión.
+- Administrar roles.
+- Controlar permisos de acceso.
+- Consultar actividad de los usuarios.
+
+**Gestión de consultas**
+- Consultar historial de conversaciones.
+- Revisar preguntas realizadas.
+- Consultar documentos utilizados para responder.
+- Identificar consultas sin resultados.
+- Analizar consultas frecuentes.
+
+## 2.2. Asistente conversacional
+
+Será la funcionalidad principal del producto.
+
+Permitirá:
+
+- Realizar preguntas en lenguaje natural.
+- Mantener conversaciones con contexto.
+- Consultar documentación empresarial.
+- Obtener respuestas resumidas o detalladas.
+- Visualizar las fuentes utilizadas.
+- Acceder al documento de origen.
+- Consultar fragmentos específicos.
+- Informar cuando no exista información suficiente para responder.
+
+Ejemplo:
+
+**Usuario:**
+¿Cuál es el procedimiento para solicitar vacaciones?
+
+**Sistema:**
+Según el documento "Política de Recursos Humanos", el procedimiento consiste en solicitar los días correspondientes mediante el formulario interno y obtener la aprobación del responsable del área.
+
+**Fuentes utilizadas:**
+- Política de Recursos Humanos.pdf
+- Sección: Solicitud de vacaciones
+- Página: 8
+
+Si la información no se encuentra en los documentos:
+
+"No encontré información suficiente en la documentación disponible para responder esta consulta."
+
+Esta última funcionalidad es fundamental para evitar que el modelo invente procedimientos.
+
+---
+
+# 3. ARQUITECTURA TECNOLÓGICA
+
+## 3.1. Tecnologías propuestas
+
+| Componente | Tecnología | Responsabilidad |
+|---|---|---|
+| Backend | Python | Lógica de negocio |
+| API | FastAPI | Servicios REST |
+| Frontend | React | Interfaz de usuario |
+| Base de datos | PostgreSQL | Usuarios, documentos y conversaciones |
+| Vector Store | pgvector | Almacenamiento de embeddings |
+| IA generativa | Gemini API | Generación de respuestas |
+| Embeddings | Modelo de embeddings configurable | Representación vectorial del contenido |
+| Procesamiento | PyMuPDF / python-docx | Extracción de documentos |
+| Autenticación | JWT | Gestión de sesiones |
+| Testing | Pytest | Pruebas automatizadas |
+| Contenedores | Docker | Entorno de ejecución |
+
+**Decisión arquitectónica:** utilizar PostgreSQL con pgvector en lugar de incorporar inicialmente una base vectorial independiente.
+
+Esto permite centralizar los datos relacionales y vectoriales, simplificando la infraestructura del proyecto.
+
+Los proveedores de modelos de IA y embeddings deberán estar desacoplados mediante interfaces, de modo que posteriormente puedan reemplazarse sin modificar toda la aplicación.
+
+## 3.2. Arquitectura general
+
+El sistema tendrá los siguientes componentes:
+
+1. Frontend React.
+2. Backend FastAPI.
+3. Servicio de autenticación.
+4. Servicio de gestión documental.
+5. Servicio de procesamiento e indexación.
+6. Servicio RAG.
+7. Servicio de embeddings.
+8. Servicio de comunicación con el LLM.
+9. PostgreSQL con pgvector.
+10. Almacenamiento de archivos.
+
+## 3.3. Flujo general de información
+
+### Flujo de carga documental
+
+1. El administrador selecciona un archivo.
+2. React envía el archivo al backend.
+3. FastAPI valida formato, tamaño y permisos.
+4. El archivo se almacena.
+5. Se registra el documento en PostgreSQL.
+6. Se extrae el texto.
+7. El texto se limpia y normaliza.
+8. Se divide en fragmentos (chunks).
+9. Se generan embeddings para cada fragmento.
+10. Los vectores se almacenan en pgvector.
+11. El documento queda disponible para consultas.
+
+### Flujo de consulta RAG
+
+1. El usuario escribe una pregunta.
+2. El frontend envía la consulta al backend.
+3. El backend valida al usuario y sus permisos.
+4. Se genera un embedding de la pregunta.
+5. Se realiza una búsqueda semántica en pgvector.
+6. Se recuperan los fragmentos más relevantes.
+7. Se filtran los resultados según permisos y contexto.
+8. Se construye un prompt con la pregunta y los fragmentos.
+9. El LLM genera una respuesta.
+10. El backend valida y estructura el resultado.
+11. Se devuelve la respuesta junto con sus fuentes.
+12. Se registra la interacción.
+
+---
+
+# 4. DESARROLLO POR ETAPAS
+
+El desarrollo se realizará de manera incremental. Cada etapa deberá producir un resultado funcional y verificable antes de avanzar a la siguiente.
+
+## ETAPA 1. Análisis y planificación
+
+**Objetivo:** definir el alcance inicial, las decisiones técnicas y la estructura del proyecto.
+
+Tareas:
+
+- Definir los requisitos funcionales.
+- Definir los requisitos no funcionales.
+- Establecer los formatos documentales soportados.
+- Definir los límites de tamaño de archivos.
+- Diseñar la arquitectura general.
+- Definir las entidades principales de la base de datos.
+- Diseñar los endpoints iniciales.
+- Crear el repositorio Git.
+- Preparar la documentación técnica.
+- Definir la estructura de carpetas.
+
+Entregables:
+
+- Documento de requisitos.
+- Diagrama de arquitectura.
+- Modelo inicial de datos.
+- Estructura del repositorio.
+- Plan de desarrollo.
+
+**Criterio de finalización:** contar con una planificación técnica clara y un entorno de desarrollo preparado.
+
+## ETAPA 2. Configuración del entorno y estructura del backend
+
+**Objetivo:** preparar una base sólida para desarrollar la aplicación.
+
+Tareas:
+
+- Crear proyecto Python.
+- Configurar entorno virtual.
+- Instalar dependencias.
+- Configurar FastAPI.
+- Configurar PostgreSQL.
+- Integrar pgvector.
+- Configurar variables de entorno.
+- Implementar conexión a la base de datos.
+- Crear estructura modular.
+- Configurar Docker.
+- Implementar endpoint de health check.
+- Configurar logging.
+
+Estructura inicial sugerida:
+
+    backend/
+      app/
+        api/
+          routes/
+        core/
+        database/
+        models/
+        schemas/
+        services/
+        repositories/
+        rag/
+        document_processing/
+        main.py
+      tests/
+      requirements.txt
+      Dockerfile
+      .env.example
+
+El proyecto deberá separar las responsabilidades de cada módulo.
+
+No se deberá implementar toda la lógica directamente dentro de los endpoints.
+
+Entregables:
+
+- Backend ejecutándose.
+- Base de datos conectada.
+- Migraciones iniciales.
+- Docker configurado.
+- API documentada mediante Swagger.
+
+**Criterio de finalización:** poder ejecutar el backend y verificar la conexión con PostgreSQL.
+
+## ETAPA 3. Gestión documental
+
+**Objetivo:** permitir cargar y administrar documentos.
+
+Tareas:
+
+- Crear modelo Document.
+- Implementar carga de archivos.
+- Validar extensiones permitidas.
+- Validar tamaño máximo.
+- Generar identificadores únicos.
+- Almacenar archivos.
+- Registrar metadatos.
+- Implementar listado de documentos.
+- Implementar consulta individual.
+- Implementar eliminación.
+- Implementar estados de procesamiento.
+
+Estados sugeridos:
+
+- PENDING: pendiente de procesamiento.
+- PROCESSING: en procesamiento.
+- COMPLETED: procesamiento finalizado.
+- FAILED: error durante el procesamiento.
+
+Endpoints iniciales:
+
+    POST   /api/documents
+    GET    /api/documents
+    GET    /api/documents/{id}
+    DELETE /api/documents/{id}
+    POST   /api/documents/{id}/reprocess
+
+Para la primera versión se utilizará almacenamiento local. La arquitectura deberá permitir incorporar posteriormente almacenamiento externo como Amazon S3.
+
+Entregables:
+
+- Carga documental funcional.
+- Listado y administración.
+- Validaciones.
+- Registro de estados.
+
+**Criterio de finalización:** poder cargar diferentes documentos y administrarlos desde la API.
+
+## ETAPA 4. Extracción y procesamiento de documentos
+
+**Objetivo:** transformar documentos en texto utilizable por el sistema RAG.
+
+Tareas:
+
+- Implementar extractor para PDF.
+- Implementar extractor para DOCX.
+- Implementar extractor para TXT.
+- Normalizar espacios y saltos de línea.
+- Eliminar caracteres innecesarios.
+- Detectar documentos sin contenido extraíble.
+- Preservar metadatos de páginas y secciones cuando sea posible.
+- Implementar manejo de errores.
+- Registrar resultados del procesamiento.
+
+Se deberá diseñar una interfaz común para los extractores, evitando acoplar el sistema a una biblioteca específica.
+
+Ejemplo conceptual:
+
+    DocumentProcessor
+      ├── PDFProcessor
+      ├── DOCXProcessor
+      └── TXTProcessor
+
+También se deberá contemplar que algunos PDF contienen imágenes escaneadas y no texto seleccionable.
+
+El OCR se dejará para una etapa posterior, pero la arquitectura deberá permitir incorporarlo.
+
+Entregables:
+
+- Extractores funcionales.
+- Texto normalizado.
+- Metadatos documentales.
+- Manejo de archivos inválidos.
+
+**Criterio de finalización:** cargar un archivo y obtener su contenido textual correctamente extraído.
+
+## ETAPA 5. Implementación de embeddings y búsqueda vectorial
+
+**Objetivo:** convertir el contenido documental en información consultable mediante similitud semántica.
+
+Esta es una de las etapas más importantes del proyecto.
+
+### 5.1. División en fragmentos (chunking)
+
+Los documentos deberán dividirse en fragmentos de texto.
+
+No conviene enviar documentos completos al modelo porque pueden superar los límites de contexto y dificultar la recuperación de información relevante.
+
+Se deberá implementar:
+
+- División por cantidad de tokens.
+- Superposición entre fragmentos (overlap).
+- Conservación de metadatos.
+- Identificación del documento de origen.
+- Identificación de página o sección.
+
+Como punto de partida experimental:
+
+- Tamaño: 500 tokens.
+- Overlap: 75 tokens.
+
+Estos valores no son definitivos. Se deberán evaluar con documentos reales.
+
+### 5.2. Generación de embeddings
+
+Cada fragmento se convertirá en un vector numérico mediante un modelo de embeddings.
+
+Se deberá:
+
+- Integrar un proveedor de embeddings.
+- Generar vectores.
+- Controlar errores de comunicación.
+- Validar dimensiones.
+- Registrar el modelo utilizado.
+- Evitar generar embeddings duplicados innecesariamente.
+
+### 5.3. Almacenamiento vectorial
+
+Se almacenarán los siguientes datos:
+
+- ID del fragmento.
+- ID del documento.
+- Contenido textual.
+- Vector generado.
+- Número de página.
+- Número de fragmento.
+- Metadatos adicionales.
+
+### 5.4. Búsqueda semántica
+
+Cuando un usuario realice una consulta, el sistema generará un embedding de esa pregunta y buscará los fragmentos con mayor similitud.
+
+Se deberá implementar:
+
+- Búsqueda por similitud.
+- Límite configurable de resultados.
+- Umbral mínimo de relevancia.
+- Filtros por documento.
+- Filtros por organización y permisos.
+
+Entregables:
+
+- Generación de embeddings.
+- Persistencia en pgvector.
+- Búsqueda semántica funcional.
+- Recuperación de fragmentos relevantes.
+
+**Criterio de finalización:** realizar una consulta y recuperar fragmentos pertinentes sin utilizar todavía un LLM para generar respuestas.
+
+## ETAPA 6. Implementación del motor RAG
+
+**Objetivo:** conectar la recuperación documental con un modelo de lenguaje para generar respuestas contextualizadas.
+
+### 6.1. Integración con LLM
+
+Se integrará un proveedor de modelos de lenguaje mediante API.
+
+Inicialmente se podrá utilizar Gemini, manteniendo una capa de abstracción para incorporar otros proveedores en el futuro.
+
+### 6.2. Construcción del contexto
+
+El sistema deberá combinar:
+
+- Pregunta del usuario.
+- Fragmentos recuperados.
+- Información de los documentos.
+- Instrucciones del sistema.
+
+### 6.3. Diseño del prompt
+
+El prompt deberá establecer reglas claras:
+
+- Responder utilizando exclusivamente el contexto proporcionado.
+- No inventar información.
+- Reconocer cuando la documentación no contiene la respuesta.
+- No asumir datos que no aparecen en las fuentes.
+- Mantener un lenguaje claro y profesional.
+- Indicar las fuentes utilizadas.
+- Diferenciar información explícita de posibles interpretaciones.
+
+### 6.4. Generación de respuestas
+
+El sistema deberá devolver una estructura consistente que incluya:
+
+- Respuesta generada.
+- Fuentes documentales.
+- Fragmentos utilizados.
+- Indicadores de relevancia.
+- Estado de la consulta.
+
+### 6.5. Control de respuestas
+
+Se deberán implementar mecanismos para evitar respuestas sin respaldo documental.
+
+Si la búsqueda no encuentra información suficientemente relevante, el sistema no deberá consultar al LLM para generar una respuesta especulativa.
+
+Entregables:
+
+- Integración con LLM.
+- Pipeline RAG funcional.
+- Prompt documentado.
+- Respuestas con fuentes.
+- Manejo de consultas sin información.
+
+**Criterio de finalización:** realizar preguntas sobre documentos cargados y obtener respuestas contextualizadas con referencias verificables.
+
+## ETAPA 7. Desarrollo del frontend
+
+**Objetivo:** construir una interfaz que permita utilizar y administrar el sistema.
+
+Se utilizará React.
+
+### 7.1. Autenticación
+
+- Login.
+- Cierre de sesión.
+- Manejo de tokens.
+- Protección de rutas.
+- Control de permisos.
+
+### 7.2. Dashboard
+
+Mostrar:
+
+- Cantidad de documentos.
+- Documentos procesados.
+- Documentos pendientes.
+- Errores de procesamiento.
+- Cantidad de consultas.
+- Actividad reciente.
+
+### 7.3. Gestión documental
+
+- Subir archivos.
+- Visualizar documentos.
+- Consultar estados.
+- Eliminar documentos.
+- Reprocesar archivos.
+- Consultar metadatos.
+
+### 7.4. Chat inteligente
+
+La interfaz conversacional deberá incluir:
+
+- Campo para realizar consultas.
+- Historial de conversaciones.
+- Respuestas del asistente.
+- Indicador de procesamiento.
+- Referencias documentales.
+- Acceso a las fuentes.
+- Manejo de errores.
+
+### 7.5. Experiencia de usuario
+
+Se deberá priorizar una interfaz sencilla, clara y profesional.
+
+El usuario no necesita conocer qué es un embedding o cómo funciona RAG para utilizar el sistema.
+
+Entregables:
+
+- Aplicación React.
+- Login.
+- Dashboard.
+- Gestión documental.
+- Chat conversacional.
+
+**Criterio de finalización:** poder utilizar las funcionalidades principales desde una interfaz web sin interactuar directamente con Swagger.
+
+## ETAPA 8. Seguridad y permisos empresariales
+
+**Objetivo:** garantizar que cada usuario consulte únicamente la documentación autorizada.
+
+Esta etapa es especialmente importante porque el sistema estará orientado a empresas.
+
+Tareas:
+
+- Implementar autenticación.
+- Implementar roles.
+- Implementar permisos.
+- Incorporar separación por organización.
+- Asociar documentos a organizaciones.
+- Filtrar búsquedas vectoriales según permisos.
+- Validar permisos antes de recuperar información.
+- Proteger endpoints.
+- Validar archivos.
+- Evitar exposición de información sensible.
+- Proteger credenciales y claves API.
+
+Se deberá considerar especialmente la seguridad del contexto RAG.
+
+No alcanza con proteger los endpoints: los filtros de permisos deben aplicarse también a los fragmentos recuperados de la base vectorial.
+
+También se deberá contemplar que un documento puede contener instrucciones maliciosas o texto diseñado para manipular al modelo. El contenido documental deberá tratarse como información no confiable y nunca como instrucciones del sistema.
+
+Roles iniciales:
+
+**Administrador**
+- Gestionar usuarios.
+- Gestionar documentos.
+- Consultar actividad.
+- Administrar la organización.
+
+**Usuario**
+- Consultar documentos autorizados.
+- Mantener conversaciones.
+- Consultar sus propios historiales.
+
+Entregables:
+
+- Sistema de autenticación.
+- Roles y permisos.
+- Separación de información por organización.
+- Validaciones de seguridad.
+
+**Criterio de finalización:** demostrar que un usuario no puede acceder a información de otra organización ni a documentos para los que no tiene autorización.
+
+## ETAPA 9. Testing y evaluación de calidad
+
+**Objetivo:** comprobar que el sistema funcione correctamente y que las respuestas de IA sean confiables.
+
+Se utilizará Pytest.
+
+### 9.1. Testing del backend
+
+- Tests de endpoints.
+- Tests de autenticación.
+- Tests de permisos.
+- Tests de carga documental.
+- Tests de extracción.
+- Tests de persistencia.
+- Tests de errores.
+
+### 9.2. Testing del pipeline RAG
+
+Se deberán crear documentos de prueba con información conocida y preguntas cuya respuesta pueda verificarse.
+
+Evaluar:
+
+- Si recupera los fragmentos correctos.
+- Si identifica información relevante.
+- Si genera respuestas coherentes.
+- Si utiliza las fuentes correctas.
+- Si reconoce información inexistente.
+- Si evita inventar respuestas.
+
+### 9.3. Métricas de evaluación
+
+Se deberán incorporar métricas específicas de RAG:
+
+**Retrieval**
+- Precision@K: proporción de resultados recuperados que son relevantes.
+- Recall@K: proporción de información relevante recuperada.
+- MRR: posición del primer resultado relevante.
+
+**Generation**
+- Faithfulness: grado en que la respuesta está respaldada por el contexto.
+- Answer Relevancy: relevancia de la respuesta respecto de la pregunta.
+- Correctness: correspondencia con una respuesta de referencia.
+
+Se podrá utilizar RAGAS u otras herramientas de evaluación, además de un conjunto de pruebas propias.
+
+### 9.4. Pruebas de rendimiento
+
+- Tiempo de procesamiento documental.
+- Tiempo de recuperación vectorial.
+- Tiempo de respuesta del LLM.
+- Tiempo total de consulta.
+- Consumo de tokens.
+- Costos aproximados por consulta.
+
+Entregables:
+
+- Suite de tests.
+- Dataset de evaluación.
+- Informe de resultados.
+- Identificación de problemas.
+- Correcciones.
+
+**Criterio de finalización:** contar con resultados medibles que permitan evaluar la calidad y confiabilidad del sistema.
+
+## ETAPA 10. Despliegue y documentación
+
+**Objetivo:** preparar el sistema para que pueda ejecutarse fuera del entorno local.
+
+Tareas:
+
+- Preparar Docker Compose.
+- Configurar variables de entorno.
+- Configurar base de datos de producción.
+- Configurar almacenamiento persistente.
+- Desplegar backend.
+- Desplegar frontend.
+- Configurar HTTPS.
+- Configurar logging.
+- Implementar manejo de errores.
+- Documentar instalación.
+- Documentar configuración.
+- Documentar API.
+- Preparar datos de demostración.
+
+Se deberá utilizar un proveedor de hosting que permita ejecutar tanto la aplicación Python como PostgreSQL con pgvector.
+
+No se deberá asumir que cualquier servicio gratuito permite ejecutar Docker o mantener una base de datos vectorial de forma persistente.
+
+Entregables:
+
+- Aplicación desplegada.
+- Repositorio actualizado.
+- README profesional.
+- Documentación técnica.
+- Demo funcional.
+
+**Criterio de finalización:** que otra persona pueda acceder a la aplicación y probar sus funcionalidades principales.
+
+---
+
+# 5. MODELO DE DATOS INICIAL
+
+Se proponen las siguientes entidades:
+
+## Organizations
+
+Representa a cada empresa que utiliza el sistema.
+
+Campos:
+- id
+- name
+- created_at
+
+## Users
+
+Representa a los usuarios.
+
+Campos:
+- id
+- organization_id
+- name
+- email
+- password_hash
+- role
+- created_at
+
+## Documents
+
+Representa los archivos cargados.
+
+Campos:
+- id
+- organization_id
+- uploaded_by
+- filename
+- storage_path
+- mime_type
+- file_size
+- status
+- checksum
+- created_at
+- updated_at
+
+## DocumentChunks
+
+Representa los fragmentos de texto generados.
+
+Campos:
+- id
+- document_id
+- organization_id
+- chunk_index
+- content
+- embedding
+- page_number
+- metadata
+- created_at
+
+## Conversations
+
+Representa las conversaciones de los usuarios.
+
+Campos:
+- id
+- user_id
+- organization_id
+- title
+- created_at
+
+## Messages
+
+Representa los mensajes intercambiados.
+
+Campos:
+- id
+- conversation_id
+- role
+- content
+- created_at
+
+## MessageSources
+
+Relaciona las respuestas con los fragmentos documentales utilizados.
+
+Campos:
+- id
+- message_id
+- chunk_id
+- relevance_score
+
+## ProcessingJobs
+
+Permite registrar los procesos de carga e indexación.
+
+Campos:
+- id
+- document_id
+- status
+- error_message
+- started_at
+- completed_at
+
+El modelo podrá evolucionar durante el desarrollo, pero estas entidades permiten cubrir las funcionalidades principales.
+
+---
+
+# 6. ESTRUCTURA GENERAL DEL REPOSITORIO
+
+Se propone organizar el proyecto de la siguiente manera:
+
+    smartdocs-ai/
+    │
+    ├── backend/
+    │   ├── app/
+    │   │   ├── api/
+    │   │   ├── core/
+    │   │   ├── database/
+    │   │   ├── models/
+    │   │   ├── schemas/
+    │   │   ├── repositories/
+    │   │   ├── services/
+    │   │   ├── rag/
+    │   │   ├── document_processing/
+    │   │   └── main.py
+    │   │
+    │   ├── tests/
+    │   ├── requirements.txt
+    │   └── Dockerfile
+    │
+    ├── frontend/
+    │   ├── src/
+    │   │   ├── components/
+    │   │   ├── pages/
+    │   │   ├── services/
+    │   │   ├── hooks/
+    │   │   ├── contexts/
+    │   │   └── App.jsx
+    │   └── package.json
+    │
+    ├── docs/
+    │   ├── requirements.md
+    │   ├── architecture.md
+    │   ├── database.md
+    │   ├── api.md
+    │   └── rag-pipeline.md
+    │
+    ├── docker-compose.yml
+    ├── .env.example
+    ├── .gitignore
+    └── README.md
+
+---
+
+# 7. PLANIFICACIÓN TEMPORAL
+
+Estimación para un desarrollo individual, trabajando aproximadamente entre 5 y 7 horas semanales.
+
+| Etapa | Duración estimada |
+|---|---:|
+| Análisis y planificación | 1 semana |
+| Entorno y backend | 1 semana |
+| Gestión documental | 1 semana |
+| Extracción de documentos | 1 semana |
+| Embeddings y búsqueda | 2 semanas |
+| Motor RAG | 2 semanas |
+| Frontend | 2 semanas |
+| Seguridad | 1 semana |
+| Testing y evaluación | 2 semanas |
+| Despliegue y documentación | 1 semana |
+
+**Duración estimada total: 15 semanas.**
+
+Los tiempos son orientativos. Algunas etapas pueden superponerse y otras pueden requerir más tiempo según los resultados de las pruebas.
+
+No es necesario cumplir el calendario estrictamente. La prioridad será conseguir funcionalidades completas y verificables.
+
+---
+
+# 8. FUNCIONALIDADES FUTURAS
+
+Una vez completada la primera versión, se podrán incorporar nuevas capacidades.
+
+## 8.1. Procesamiento OCR
+
+Permitir la carga de documentos escaneados e imágenes mediante reconocimiento óptico de caracteres.
+
+## 8.2. Búsqueda híbrida
+
+Combinar búsqueda semántica con búsqueda textual tradicional para mejorar la recuperación de información.
+
+## 8.3. Re-ranking
+
+Incorporar un modelo que vuelva a ordenar los fragmentos recuperados según su relevancia real para la pregunta.
+
+## 8.4. Consultas avanzadas
+
+Permitir preguntas que requieran combinar información de varios documentos.
+
+## 8.5. Integraciones empresariales
+
+Incorporar conectores para:
+
+- Google Drive.
+- OneDrive.
+- SharePoint.
+- Sistemas CRM.
+- Sistemas ERP.
+- APIs REST externas.
+
+## 8.6. Automatización con IA
+
+Incorporar acciones basadas en las respuestas del sistema.
+
+Ejemplos:
+
+- Crear tickets de soporte.
+- Generar informes.
+- Enviar notificaciones.
+- Registrar solicitudes.
+- Derivar consultas a determinados departamentos.
+
+## 8.7. Analítica
+
+Incorporar estadísticas sobre:
+
+- Documentos más consultados.
+- Preguntas frecuentes.
+- Consultas sin respuesta.
+- Usuarios activos.
+- Tiempo promedio de respuesta.
+- Calidad de recuperación.
+
+---
+
+# 9. CRITERIOS DE CALIDAD DEL PRODUCTO
+
+El proyecto no se considerará terminado solamente porque el chatbot pueda responder preguntas.
+
+Deberá cumplir con los siguientes criterios:
+
+1. Los documentos deben procesarse correctamente.
+2. Las respuestas deben estar respaldadas por fuentes.
+3. El sistema debe reconocer cuando no tiene información suficiente.
+4. Los usuarios no deben acceder a documentos no autorizados.
+5. Las consultas deben tener tiempos de respuesta razonables.
+6. Los errores deben registrarse y poder diagnosticarse.
+7. La aplicación debe contar con pruebas automatizadas.
+8. Los proveedores externos deben estar desacoplados.
+9. Los costos de utilización de IA deben poder medirse.
+10. La instalación debe estar documentada.
+
+---
+
+# 10. RESULTADO ESPERADO
+
+Al finalizar el proyecto se contará con una aplicación web empresarial que permita cargar documentación, procesarla automáticamente y consultar su contenido mediante un asistente inteligente.
+
+El producto deberá demostrar la implementación de una arquitectura RAG completa, integrando procesamiento documental, embeddings, búsqueda vectorial, modelos de lenguaje y una interfaz web.
+
+Desde el punto de vista profesional, el proyecto permitirá demostrar conocimientos prácticos en:
+
+- Python y FastAPI.
+- Desarrollo de APIs REST.
+- Inteligencia Artificial Generativa.
+- Arquitecturas RAG.
+- LLMs y embeddings.
+- Bases de datos relacionales y vectoriales.
+- Integración de servicios externos.
+- Seguridad y autenticación.
+- Testing y evaluación de sistemas de IA.
+- Docker y despliegue.
+
+El objetivo final no será desarrollar un chatbot de demostración, sino construir una solución tecnológica que pueda adaptarse a las necesidades reales de una organización.
+
+---
+
+# 11. METODOLOGÍA DE TRABAJO
+
+El desarrollo se realizará mediante entregas incrementales.
+
+Cada etapa deberá incluir:
+
+1. Análisis del requerimiento.
+2. Diseño de la solución.
+3. Implementación.
+4. Pruebas.
+5. Corrección de errores.
+6. Documentación.
+7. Commit y actualización del repositorio.
+
+Se priorizará:
+
+- Código limpio y mantenible.
+- Separación de responsabilidades.
+- Componentes reutilizables.
+- Validaciones.
+- Manejo de errores.
+- Seguridad.
+- Evitar dependencias innecesarias.
+- No implementar funcionalidades que todavía no sean necesarias.
+
+Se deberá mantener una documentación técnica actualizada para facilitar el mantenimiento y la incorporación de nuevas funcionalidades.
+
+**Principio rector del proyecto:**
+
+Construir primero una solución pequeña que funcione correctamente, medir sus resultados y luego ampliar sus capacidades sin comprometer la estabilidad de la arquitectura.
+
+Algunas decisiones técnicas que tomaría desde el comienzo
+- No utilizaría LangChain inicialmente. Implementaría primero el pipeline RAG directamente con Python para comprender cada componente. Después podríamos evaluar LangChain o LlamaIndex.
+- Usaría Gemini para generación, pero sin acoplar la lógica del proyecto a ese proveedor.
+- Usaría pgvector para evitar agregar infraestructura innecesaria.
+- No empezaría por React. Primero construiría y probaría el backend desde Swagger.
+- No implementaría todavía agentes autónomos. Este primer proyecto tiene que resolver muy bien la recuperación y consulta de información.
+Qué quiero que tengas presente
+Para que este proyecto realmente te sirva en una búsqueda laboral, hay algo que considero más importante que la cantidad de tecnologías utilizadas: poder explicar cómo funciona.
+
+En una entrevista podrían preguntarte:
+- ¿Qué diferencia existe entre RAG y un chatbot tradicional?
+- ¿Qué son los embeddings?
+- ¿Por qué dividís los documentos en chunks?
+- ¿Cómo evitás que la IA invente información?
+- ¿Qué sucede si la búsqueda recupera fragmentos incorrectos?
+- ¿Cómo medís la calidad de las respuestas?
+- ¿Cómo evitás que un usuario consulte documentos de otra empresa?

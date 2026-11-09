@@ -6,7 +6,7 @@ Estrategia de pruebas del backend, frontend, seguridad y calidad del pipeline RA
 - **Base de datos de test:** PostgreSQL con pgvector (contenedor), nunca SQLite.
 - **Frontend:** Vitest + Testing Library.
 - **Evaluación RAG:** métricas propias + RAGAS opcional.
-- **CI:** lint, tipado, tests, migraciones y build.
+- **CI objetivo (aún no configurado):** lint, tipado, tests, migraciones y build.
 
 ---
 
@@ -43,8 +43,8 @@ Estrategia de pruebas del backend, frontend, seguridad y calidad del pipeline RA
 | `pytest-asyncio` | Tests async |
 | `pytest-cov` | Cobertura |
 | `httpx.AsyncClient` | Cliente de API |
-| `testcontainers` o servicio de CI | PostgreSQL + pgvector |
-| `factory-boy` o factories propias | Datos de prueba |
+| Contenedor PostgreSQL/pgvector local o servicio de CI | Base de datos real de tests |
+| Helpers propios en `conftest.py` | Datos de prueba |
 | `freezegun` (opcional) | Tiempo determinista |
 | `respx`/mocks propios | Proveedores externos |
 
@@ -62,50 +62,20 @@ Estrategia de pruebas del backend, frontend, seguridad y calidad del pipeline RA
 
 ## 3. Estructura de tests
 
+Estructura implementada en la Etapa 2:
+
 ```text
 backend/tests/
-├── conftest.py
-├── factories/
-│   ├── organization.py
-│   ├── user.py
-│   ├── document.py
-│   └── conversation.py
+├── conftest.py              # fixtures, helpers y reset de esquema
 ├── unit/
-│   ├── test_normalizer.py
-│   ├── test_chunking.py
-│   ├── test_prompt_builder.py
-│   ├── test_guards.py
 │   └── test_security_utils.py
 ├── integration/
-│   ├── test_auth.py
-│   ├── test_users.py
-│   ├── test_documents.py
-│   ├── test_processing.py
-│   ├── test_retrieval.py
-│   ├── test_chat.py
-│   └── test_admin.py
-├── security/
-│   ├── test_tenant_isolation.py
-│   ├── test_roles.py
-│   ├── test_prompt_injection.py
-│   └── test_file_upload.py
-├── rag/
-│   ├── test_retrieval_metrics.py
-│   ├── test_answer_quality.py
-│   └── test_no_info_policy.py
-├── performance/
-│   └── test_latency_budget.py
-└── fixtures/
-    ├── documents/
-    │   ├── sample.pdf
-    │   ├── sample.docx
-    │   ├── sample.txt
-    │   ├── scanned.pdf
-    │   └── corrupt.pdf
-    └── rag/
-        ├── corpus/
-        └── golden_dataset.jsonl
+│   └── test_auth.py
+└── security/
+    └── test_tenant_isolation.py
 ```
+
+Las factories son funciones auxiliares (`create_organization`, `create_user`) dentro de `conftest.py`; no existe un paquete `tests/factories/`. Las carpetas de documentos, RAG, rendimiento y fixtures binarios se incorporan en etapas posteriores.
 
 Frontend:
 
@@ -122,17 +92,25 @@ frontend/src/
 
 ### 4.1. Base de datos
 
-- Levantar PostgreSQL con pgvector en un contenedor.
-- Aplicar migraciones de Alembic antes de la suite.
-- Aislar cada test con transacción y rollback, o esquema limpio por test.
+- Levantar PostgreSQL con pgvector mediante `docker compose up -d db`. El script `docker/postgres/init-test-db.sql` crea la base `smartdocs_test`.
+- Configurar `DATABASE_TEST_URL` (por defecto en `conftest.py`: `postgresql+asyncpg://smartdocs:smartdocs@localhost:5432/smartdocs_test`).
+- La suite crea y elimina el esquema con `Base.metadata.create_all` / `drop_all` al inicio y al final de la sesión. **No aplica migraciones de Alembic**; esa verificación se ejecuta aparte (ver §5.3).
+- Aislar cada test con transacción y rollback.
 - No usar SQLite: no soporta `vector` ni el comportamiento real de PostgreSQL.
+- La cobertura requiere `concurrency = ["greenlet"]` por el uso de SQLAlchemy async (ya configurado en `pyproject.toml`).
 
 ### 4.2. Fixtures principales
 
+Implementadas en la Etapa 2:
+
 - `db_session`: sesión transaccional con rollback.
-- `client`: `AsyncClient` con la app.
-- `org_a`, `org_b`: dos organizaciones distintas.
-- `admin_a`, `user_a`, `user_b`: usuarios con tokens válidos.
+- `client`: `AsyncClient` con la app y `get_db` sobrescrito.
+- `org_a`, `org_b`: dos organizaciones distintas (`acme`, `globex`).
+- `admin_a`, `user_a`, `admin_b`: usuarios de prueba; los emails usan dominios `.com` porque `email-validator` rechaza `.test`.
+- `create_organization`, `create_user`: helpers para crear datos dentro de un test.
+
+Previstas para etapas posteriores:
+
 - `document_completed`: documento con chunks y embeddings de prueba.
 - `fake_embedding_provider`: vectores deterministas.
 - `fake_llm_provider`: respuestas controladas.
@@ -178,10 +156,18 @@ frontend/src/
 
 ### 5.3. Migraciones
 
-- Aplicar todas las migraciones desde cero en una base vacía.
+La suite de tests no aplica migraciones; se verifica por separado contra una base vacía:
+
+```bash
+cd backend
+uv run alembic upgrade head
+uv run alembic downgrade base
+uv run alembic upgrade head
+```
+
 - Verificar `downgrade` de las migraciones críticas.
 - Verificar extensiones `vector` y `citext`.
-- Verificar `UNIQUE (organization_id, id)`, FKs compuestas y el índice único parcial de jobs activos.
+- Verificar `UNIQUE (organization_id, id)`, FKs compuestas y el índice único parcial de jobs activos cuando se implementen en Etapa 3.
 
 ---
 

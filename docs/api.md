@@ -128,10 +128,11 @@ Reglas:
 ### 2.1. Modelo de tokens
 
 - **Access token:** JWT de corta duración (15 minutos por defecto).
-- **Refresh token:** opaco o JWT con `jti`, revocable, rotativo (7 días por defecto).
-- Claims del access token: `sub` (user ID), `org` (organization ID), `role`, `iat`, `exp`, `jti`.
+- **Refresh token:** JWT con `type=refresh`, `jti` y `ver`, revocable y rotativo (7 días por defecto). En la base de datos solo se persiste su hash SHA-256, nunca el token en claro.
+- Claims del access token: `sub` (user ID), `org` (organization ID), `role`, `ver` (versión de sesión), `type=access`, `iat`, `exp`, `jti`.
 - El cliente envía el access token en `Authorization`.
 - El refresh token se envía solo a `/auth/refresh` y `/auth/logout`.
+- La reutilización de un refresh token ya revocado invalida toda la sesión del usuario (`token_version += 1`).
 
 ### 2.2. `POST /api/v1/auth/login`
 
@@ -160,7 +161,7 @@ Autentica un usuario y emite tokens. Requiere el identificador de organización 
   "access_token": "eyJ...",
   "token_type": "bearer",
   "expires_in": 900,
-  "refresh_token": "rt_..."
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
 
@@ -173,7 +174,7 @@ Rota el refresh token y emite un nuevo par.
 **Request:**
 
 ```json
-{ "refresh_token": "rt_..." }
+{ "refresh_token": "eyJhbGciOiJIUzI1NiIs..." }
 ```
 
 **Response `200`:** mismo formato que login.
@@ -184,10 +185,12 @@ Rota el refresh token y emite un nuevo par.
 
 ### 2.4. `POST /api/v1/auth/logout`
 
+Endpoint público que recibe el refresh token; no requiere access token. Es idempotente: un token inválido, vencido o ya revocado también devuelve `204`.
+
 **Request:**
 
 ```json
-{ "refresh_token": "rt_..." }
+{ "refresh_token": "eyJhbGciOiJIUzI1NiIs..." }
 ```
 
 **Response `204 No Content`.**
@@ -655,7 +658,7 @@ Alias versionado para clientes.
 |---|---|---|---|
 | POST | `/api/v1/auth/login` | Público | 2 |
 | POST | `/api/v1/auth/refresh` | Público (refresh token) | 2 |
-| POST | `/api/v1/auth/logout` | Autenticado | 2 |
+| POST | `/api/v1/auth/logout` | Público (refresh token) | 2 |
 | GET | `/api/v1/auth/me` | Autenticado | 2 |
 | GET | `/api/v1/users` | ADMIN | 8 |
 | POST | `/api/v1/users` | ADMIN | 8 |

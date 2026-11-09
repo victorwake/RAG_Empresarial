@@ -347,14 +347,16 @@ Defensas:
 
 ### Etapa 2
 
-- [ ] `.env` fuera del repositorio y `.env.example` completo.
-- [ ] CORS configurado.
-- [ ] Health check sin datos sensibles.
-- [ ] Logging con redacción básica.
-- [ ] Argon2id y política de contraseñas.
-- [ ] JWT corto + refresh rotativo revocable.
-- [ ] Respuesta 401 genérica en login.
-- [ ] `TenantContext` derivado del token.
+- [x] `.env` fuera del repositorio y `.env.example` completo.
+- [x] CORS configurado.
+- [x] Health check sin datos sensibles.
+- [x] Logging con redacción básica.
+- [x] Argon2id y política de contraseñas.
+- [x] JWT corto + refresh rotativo revocable.
+- [x] Respuesta 401 genérica en login.
+- [x] `TenantContext` derivado del token.
+
+> El rate limiting y la protección contra fuerza bruta quedan como mejora futura; no forman parte del criterio de cierre de la Etapa 2.
 
 ### Etapa 3
 

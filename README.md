@@ -4,7 +4,7 @@ Plataforma empresarial de consulta inteligente de documentación corporativa bas
 
 SmartDocs AI permite cargar documentos internos (PDF, DOCX y TXT), procesarlos, indexarlos y consultarlos mediante un asistente conversacional que responde **exclusivamente** con información recuperada de esas fuentes, citando los documentos y fragmentos utilizados.
 
-> **Estado actual:** Etapa 1 — análisis, planificación y documentación. Todavía no existe código de aplicación.
+> **Estado actual:** Etapas 1 y 2 cerradas. Próxima: Etapa 3 — gestión documental. Punto de reanudación y verificación: [`docs/status.md`](docs/status.md).
 >
 > Este repositorio se construirá de forma incremental. Cada etapa debe dejar un resultado funcional y verificable antes de avanzar.
 
@@ -139,7 +139,7 @@ smartdocs-ai/
 └── ROADMAP.md
 ```
 
-La estructura se creará en la Etapa 2 (backend) y la Etapa 7 (frontend).
+La estructura del backend se creó en la Etapa 2; el frontend se incorpora en la Etapa 7. El detalle real y el estado por archivo están en [`docs/status.md`](docs/status.md) y [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
@@ -147,6 +147,7 @@ La estructura se creará en la Etapa 2 (backend) y la Etapa 7 (frontend).
 
 | Documento | Contenido |
 |---|---|
+| [`docs/status.md`](docs/status.md) | Estado actual, verificación y punto de reanudación |
 | [`ROADMAP.md`](ROADMAP.md) | Plan de 10 etapas con tareas, entregables, criterios y checklists |
 | [`docs/requirements.md`](docs/requirements.md) | Requisitos funcionales y no funcionales, alcance y límites |
 | [`docs/architecture.md`](docs/architecture.md) | Componentes, capas, flujos e interfaces desacopladas |
@@ -198,7 +199,24 @@ Hitos principales: **MVP backend** (Etapa 4), **RAG demostrable sin LLM** (Etapa
 
 ## Puesta en marcha
 
-Se completará en la **Etapa 2**. Requisitos previstos: Python 3.12, `uv`, Docker, Docker Compose y una clave de API de Gemini.
+Requisitos: Python 3.12, `uv`, Docker y Docker Compose. Si `uv` no está en el `PATH`, reemplazar `uv` por `python -m uv`.
+
+1. Copiar `.env.example` a `.env` y ajustar `POSTGRES_PASSWORD`, `DATABASE_URL`, `DATABASE_TEST_URL` y `JWT_SECRET` (mínimo 32 caracteres aleatorios).
+2. Instalar dependencias: `cd backend && uv sync --dev`.
+3. Levantar PostgreSQL con pgvector: `docker compose up -d db`.
+4. Aplicar migraciones: `cd backend && uv run alembic upgrade head`.
+5. Crear la organización y el administrador inicial:
+   ```bash
+   uv run python -m app.cli create-organization --name "Acme" --slug acme
+   uv run python -m app.cli create-admin --organization-slug acme --email admin@acme.com --name "Admin"
+   ```
+   La contraseña se solicita de forma interactiva o se toma de `ADMIN_PASSWORD`.
+6. Ejecutar la API: `uv run uvicorn app.main:app --reload`.
+7. Abrir Swagger en <http://localhost:8000/docs> y verificar `GET /health`.
+
+Con Docker: `docker compose up --build` levanta API y base de datos. Las migraciones se aplican aparte con `docker compose run --rm api alembic upgrade head`.
+
+Tests: `cd backend && uv run pytest --cov=app`. La suite usa `DATABASE_TEST_URL` y requiere PostgreSQL real con las extensiones `citext` y `vector`.
 
 ---
 

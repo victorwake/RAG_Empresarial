@@ -2,7 +2,7 @@
 
 Índice de la documentación técnica y funcional del proyecto.
 
-> **Estado:** Etapa 1 — planificación. Los documentos son **vivos**: se actualizan al cerrar cada etapa.
+> **Estado:** Etapas 1 y 2 cerradas — próxima Etapa 3. Punto de reanudación: [`status.md`](status.md). Los documentos son **vivos**: se actualizan al cerrar cada etapa.
 >
 > Las decisiones que dependen de experimentación están marcadas como **“a validar en Etapa 5”** y no deben tratarse como valores definitivos.
 
@@ -12,6 +12,7 @@
 
 | Documento | Qué responde | Audiencia |
 |---|---|---|
+| [`status.md`](status.md) | Dónde está el proyecto, cómo verificarlo y desde dónde retomar | Todo el equipo |
 | [`requirements.md`](requirements.md) | Qué debe hacer el sistema, para quién, con qué límites y qué queda fuera | Producto, desarrollo, evaluación |
 | [`architecture.md`](architecture.md) | Cómo se organiza el sistema, componentes, capas, flujos e interfaces | Desarrollo, revisión técnica |
 | [`database.md`](database.md) | Entidades, relaciones, índices, multi-tenancy y migraciones | Backend, datos |
@@ -89,6 +90,7 @@ Para evitar contradicciones entre documentos:
 Al cerrar cada etapa:
 
 - [ ] Actualizar los documentos afectados.
+- [ ] Actualizar `status.md` con estado, verificación y próximo paso.
 - [ ] Registrar decisiones nuevas o cambios de decisión en `decisions.md`.
 - [ ] Actualizar checkboxes del `ROADMAP`.
 - [ ] Anotar resultados de calibración o evaluación con fecha.
