@@ -62,14 +62,16 @@ Estrategia de pruebas del backend, frontend, seguridad y calidad del pipeline RA
 
 ## 3. Estructura de tests
 
-Estructura implementada en las Etapas 2 y 3:
+Estructura implementada en las Etapas 2–4:
 
 ```text
 backend/tests/
-├── conftest.py              # fixtures, helpers y reset de esquema
+├── conftest.py              # fixtures, helpers, builders de archivos y reset de esquema
 ├── unit/
 │   ├── test_security_utils.py
-│   └── test_file_validation.py
+│   ├── test_file_validation.py
+│   ├── test_normalizer.py
+│   └── test_extractors.py
 ├── integration/
 │   ├── test_auth.py
 │   ├── test_documents.py
@@ -79,7 +81,7 @@ backend/tests/
     └── test_document_isolation.py
 ```
 
-Las factories son funciones auxiliares (`create_organization`, `create_user`, `create_document`, `create_processing_job`) dentro de `conftest.py`; no existe un paquete `tests/factories/`. Las carpetas de RAG, rendimiento y fixtures binarios en disco se incorporan en etapas posteriores.
+Las factories son funciones auxiliares (`create_organization`, `create_user`, `create_document`, `create_processing_job`) dentro de `conftest.py`; no existe un paquete `tests/factories/`. Los archivos de prueba se generan en memoria con builders reales (`build_pdf_bytes`, `build_scanned_pdf_bytes`, `build_docx_bytes`). Las carpetas de RAG, rendimiento y fixtures binarios en disco se incorporan en etapas posteriores.
 
 Frontend:
 
@@ -105,7 +107,7 @@ frontend/src/
 
 ### 4.2. Fixtures principales
 
-Implementadas en las Etapas 2 y 3:
+Implementadas en las Etapas 2–4:
 
 - `db_session`: sesión transaccional con rollback.
 - `client`: `AsyncClient` con la app y `get_db` sobrescrito.
@@ -115,7 +117,8 @@ Implementadas en las Etapas 2 y 3:
 - `create_organization`, `create_user`, `create_document`, `create_processing_job`: helpers para crear datos dentro de un test.
 - `auth_headers(user)`: cabecera `Authorization` para un usuario.
 - `FakeProcessingQueue`: cola falsa que registra los encolados para inspección.
-- `PDF_BYTES`, `DOCX_BYTES`, `TXT_BYTES`: contenidos binarios válidos de prueba.
+- `build_pdf_bytes(*page_texts)`, `build_scanned_pdf_bytes(page_count)`, `build_docx_bytes(*paragraphs, title, author)`: builders que generan PDF/DOCX reales en memoria (Etapa 4; los textos de los PDF de test son ASCII porque la fuente base de PyMuPDF no soporta acentos).
+- `PDF_BYTES`, `DOCX_BYTES`, `TXT_BYTES`: contenidos binarios válidos de prueba generados por los builders.
 
 Previstas para etapas posteriores:
 
@@ -143,7 +146,8 @@ Previstas para etapas posteriores:
 
 ### 5.1. Unitarias
 
-- Normalización de texto (espacios, saltos, caracteres de control).
+- Normalización de texto: espacios, saltos, caracteres de control, cortes con guion (implementada en Etapa 4).
+- Extractores por formato: páginas, metadatos, corrupción, cifrado, sin texto y advertencias por página (implementada en Etapa 4).
 - Chunking: tamaño, overlap, metadatos, bordes, textos cortos y vacíos.
 - Construcción de prompt: secciones, delimitadores, límites de contexto.
 - Validación de salida: fuentes existentes, formato, ausencia de secretos.
@@ -155,7 +159,7 @@ Previstas para etapas posteriores:
 - Autenticación: login, refresh, logout, token expirado, usuario inactivo.
 - Usuarios: creación, duplicado por organización, cambio de rol, auto-desactivación.
 - Documentos: carga válida, extensión inválida, tamaño excedido, duplicado, borrado, reproceso y descarga (implementados en Etapa 3).
-- Procesamiento: reconciliación al arranque de jobs `PENDING`/`PROCESSING`, claim atómico e idempotencia (implementados en Etapa 3); extracción PDF/DOCX/TXT, archivo corrupto y PDF sin texto (Etapa 4).
+- Procesamiento: reconciliación al arranque de jobs `PENDING`/`PROCESSING`, claim atómico e idempotencia (implementados en Etapa 3); extracción PDF/DOCX/TXT con `page_count`, archivo vacío o truncado, tipo no soportado, corrupto y PDF sin texto (implementados en Etapa 4).
 - Persistencia: chunks, estados de documento y job.
 - Conversaciones: creación, listado, detalle, borrado, ownership.
 - Chat: respuesta con fuentes, `NO_INFO`, error del proveedor.

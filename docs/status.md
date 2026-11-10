@@ -3,9 +3,9 @@
 Punto único de reanudación. Actualizar al cerrar cada etapa.
 
 - **Actualizado:** 2026-11-10
-- **Rama:** `feat/etapa-3-gestion-documental`
-- **Etapa actual:** Etapa 3 cerrada; Etapa 4 es la siguiente.
-- **Commit:** ver `git log -1 --oneline`. El cierre de Etapa 3 se commitea junto con estos documentos.
+- **Rama:** `feat/etapa-4-extraccion`
+- **Etapa actual:** Etapa 4 cerrada; Etapa 5 es la siguiente.
+- **Commit:** ver `git log -1 --oneline`. El cierre de Etapa 4 se commitea junto con estos documentos.
 
 ---
 
@@ -16,23 +16,23 @@ Punto único de reanudación. Actualizar al cerrar cada etapa.
 | 1 — Análisis y planificación | Cerrada |
 | 2 — Backend, infraestructura y autenticación básica | Cerrada |
 | 3 — Gestión documental | Cerrada |
-| 4 — Extracción y procesamiento | Próxima |
+| 4 — Extracción y procesamiento | Cerrada |
+| 5 — Embeddings y búsqueda vectorial | Próxima |
 
 ---
 
-## 2. Entregado en la Etapa 3
+## 2. Entregado en la Etapa 4
 
-- Entidades `Document` y `ProcessingJob` con migración `0003_documents_y_processing_jobs`.
-- FK compuestas y `UNIQUE (organization_id, id)` en `documents` y `processing_jobs`; índice único parcial de jobs activos por documento.
-- `FileStorage` (Protocol) y `LocalFileStorage` con nombres generados por el sistema y protección contra path traversal.
-- `ProcessingQueue` (Protocol) y `FastAPIProcessingQueue` no durable sobre `BackgroundTasks` (ADR-004).
-- Carga multipart con validación de extensión, MIME, firma mágica, tamaño y checksum SHA-256; detección de duplicados por organización (`409` con `existing_document_id`).
-- Endpoints de documentos: carga, listado paginado, consulta, eliminación, reproceso y descarga del archivo original.
-- Transiciones de estado `PENDING → PROCESSING → COMPLETED | FAILED` con claim atómico e `attempts`.
-- Reconciliación de jobs huérfanos al arranque (marcan `FAILED` con motivo de interrupción).
-- Job de ingesta con stub de extracción: completa el documento sin extraer texto (ADR-017; extracción real en Etapa 4).
-- Tests unitarios de validación, integración de endpoints/procesamiento y aislamiento por organización en documentos.
-- Excepciones nuevas: `413 Payload Too Large` y `415 Unsupported Media Type` con soporte de `extra` en `AppError`.
+- Contrato común de extracción en `app/document_processing/base.py`: `TextExtractor` (Protocol), `ExtractionResult` (texto, páginas, `page_count`, metadatos y advertencias) y `ensure_extractable` con umbral mínimo de texto útil.
+- `PDFProcessor` (PyMuPDF): texto por página, `page_count`, metadatos de título/autor, detección de archivo corrupto, PDF protegido con contraseña y PDF sin texto (posible escaneo); advertencias por página dañada sin abortar el documento.
+- `DOCXProcessor` (python-docx): párrafos y tablas en orden documental (filas como celdas separadas por `|`), metadatos de `core_properties`; formatos sin paginación reportan `page_count` nulo.
+- `TXTProcessor`: decodificación con detección de BOM (UTF-32/16/8), UTF-8 estricto y `charset-normalizer` como respaldo.
+- `normalize_text`: unifica saltos de línea, elimina caracteres de control, une cortes de palabra con guion, colapsa espacios/tabs/NBSP, recorta líneas y limita líneas vacías consecutivas.
+- `find_extractor` y `DEFAULT_EXTRACTORS` para selección por tipo MIME; `ProcessingService` ejecuta la extracción real vía `asyncio.to_thread` reemplazando el stub de ADR-017 (ADR-018).
+- El texto extraído es transitorio: no se persiste; los chunks de la Etapa 5 serán la representación derivada (ADR-018).
+- `documents.page_count` se completa al procesar (columna existente; sin migraciones nuevas).
+- Mensajes de error accionables por caso: archivo vacío o truncado, tipo no soportado, corrupto, protegido y sin texto extraíble.
+- Tests unitarios del normalizador y de cada extractor (incluidos cifrado, corrupción y advertencias) e integración del servicio con PDF/DOCX/TXT reales; builders de archivos reales en `conftest.py`.
 
 ---
 
@@ -40,11 +40,10 @@ Punto único de reanudación. Actualizar al cerrar cada etapa.
 
 Última ejecución local:
 
-- **Tests:** 87 pasan.
-- **Cobertura:** 87 % total; módulos nuevos de Etapa 3 mayoritariamente al 100 % (routes/documents, document_service, repositorios y schemas al 100 %).
+- **Tests:** 125 pasan.
+- **Cobertura:** 89 % total; `app/document_processing` al 100 % en todos sus módulos; `processing_service` al 99 %.
 - **Ruff:** sin errores.
-- **Migraciones:** ciclo `upgrade head → downgrade base → upgrade head` verificado en una base desechable.
-- **Alembic:** `0003_documents_y_processing_jobs (head)` aplicada en la base de desarrollo `smartdocs`.
+- **Migraciones:** sin cambios en esta etapa; `0003_documents_y_processing_jobs` sigue siendo `head`.
 - **Docker:** contenedor `smartdocs-db` en ejecución; la imagen de API no se reconstruyó en esta etapa.
 
 Comandos de referencia:
@@ -82,27 +81,26 @@ docker compose run --rm api alembic current
 
 ## 5. Desviaciones y deuda conocida
 
-- El job de procesamiento es un stub: marca el documento `COMPLETED` sin extraer texto ni generar chunks (ADR-017). La extracción real se implementa en Etapa 4.
+- El texto extraído no se persiste: se extrae de nuevo al reprocesar (ADR-018). Los chunks de la Etapa 5 serán la representación persistida.
+- OCR de PDFs escaneados fuera de alcance: fallan con mensaje accionable; la interfaz `TextExtractor` permite incorporarlo en el futuro.
 - La cola `FastAPIProcessingQueue` no es durable; se compensa con reconciliación al arranque, claim atómico y reproceso manual.
 - `DELETE /documents/{id}` no bloquea por job activo: los jobs se eliminan en cascada y el job en vuelo detecta la eliminación y termina limpiamente.
 - Las migraciones se ejecutan manualmente; el entrypoint automático queda como decisión futura.
 - La suite de tests crea el esquema con `create_all`/`drop_all`; las migraciones se verifican por separado (ADR-016).
 - Rate limiting y protección contra fuerza bruta quedan para una etapa posterior.
-- No existen aún extractores de texto, chunks, pipeline RAG, proxy TLS ni frontend.
+- No existen aún chunks, pipeline RAG, proxy TLS ni frontend.
 
 ---
 
-## 6. Próximo paso: Etapa 4 — Extracción y procesamiento
+## 6. Próximo paso: Etapa 5 — Embeddings y búsqueda vectorial
 
-1. Definir la interfaz `TextExtractor` con resultado normalizado y metadatos.
-2. Implementar `PDFProcessor` (PyMuPDF), `DOCXProcessor` (python-docx) y `TXTProcessor` con detección de codificación.
-3. Normalizar espacios, saltos de línea y caracteres de control; preservar página/sección.
-4. Detectar documentos sin texto extraíble y registrar el motivo.
-5. Integrar la extracción en `ProcessingService.run_job` reemplazando el stub de Etapa 3.
-6. Manejo de errores por archivo y por página; `FAILED` con mensaje accionable.
-7. Tests con archivos de ejemplo válidos, corruptos y vacíos.
+1. Implementar chunking por tokens con overlap configurable y `page_number`/metadatos por chunk.
+2. Definir interfaz `EmbeddingProvider` y proveedor Gemini por defecto con lotes y reintentos.
+3. Crear entidad `DocumentChunk` con columna `vector(N)` (migración `0004` reservada) e índice ANN.
+4. Búsqueda semántica con `top_k` y `min_score` configurables y filtros por organización.
+5. Calibrar el umbral con dataset dorado antes de cerrar la etapa.
 
-Criterio de cierre: cargar un archivo de cada formato y obtener su contenido textual correctamente extraído, con metadatos y errores controlados.
+Criterio de cierre: realizar una consulta y recuperar fragmentos pertinentes sin LLM, con métricas y umbral justificados.
 
 ---
 

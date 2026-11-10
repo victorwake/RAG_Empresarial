@@ -74,6 +74,8 @@ flowchart LR
 
 ## 3. Extracción y normalización
 
+> **Implementado en la Etapa 4** en `app/document_processing`: extractores por formato (`PDFProcessor`, `DOCXProcessor`, `TXTProcessor`), normalización (`normalize_text`) y detección de documentos sin texto (`ensure_extractable`). El texto extraído no se persiste; los chunks de la Etapa 5 serán la representación derivada (ADR-018).
+
 ### 3.1. Extractores
 
 | Formato | Biblioteca | Metadatos preservados |
