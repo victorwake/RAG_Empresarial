@@ -1,5 +1,6 @@
 """Registro central de modelos para que Alembic los descubra."""
 
+from app.models.document import Document
 from app.models.enums import (
     DocumentStatus,
     JobStatus,
@@ -9,16 +10,19 @@ from app.models.enums import (
     UserRole,
 )
 from app.models.organization import Organization
+from app.models.processing_job import ProcessingJob
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 
 __all__ = [
+    "Document",
     "DocumentStatus",
     "JobStatus",
     "JobType",
     "MessageRole",
     "MessageStatus",
     "Organization",
+    "ProcessingJob",
     "RefreshToken",
     "User",
     "UserRole",
