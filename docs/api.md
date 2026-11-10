@@ -9,6 +9,7 @@ Contrato REST del backend. La fuente ejecutable será `/openapi.json` expuesto p
 - **Fechas:** ISO 8601 UTC (`2026-01-31T12:00:00Z`).
 - **IDs:** UUID.
 - **Documentación interactiva:** `/docs` (Swagger UI), `/redoc`, `/openapi.json`.
+- **Colección Postman:** `postman/SmartDocs-AI.postman_collection.json` con entorno local (`SmartDocs-Local.postman_environment.json`) y muestras en `postman/samples/` para probar los flujos de auth, documentos y casos de error sin escribir requests a mano.
 
 ---
 

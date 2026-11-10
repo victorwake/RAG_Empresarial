@@ -213,6 +213,7 @@ Requisitos: Python 3.12, `uv`, Docker y Docker Compose. Si `uv` no está en el `
    La contraseña se solicita de forma interactiva o se toma de `ADMIN_PASSWORD`.
 6. Ejecutar la API: `uv run uvicorn app.main:app --reload`.
 7. Abrir Swagger en <http://localhost:8000/docs> y verificar `GET /health`.
+8. Opcional: importar en Postman `postman/SmartDocs-AI.postman_collection.json` y `postman/SmartDocs-Local.postman_environment.json` (ajustar credenciales del entorno) para ejecutar los flujos de login, carga y casos de error con los archivos de `postman/samples/`.
 
 Con Docker: `docker compose up --build` levanta API y base de datos. Las migraciones se aplican aparte con `docker compose run --rm api alembic upgrade head`.
 

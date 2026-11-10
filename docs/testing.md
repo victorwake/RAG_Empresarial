@@ -58,6 +58,14 @@ Estrategia de pruebas del backend, frontend, seguridad y calidad del pipeline RA
 | `msw` | Mock de API |
 | `playwright` (opcional) | E2E |
 
+### Manual
+
+| Herramienta | Uso |
+|---|---|
+| Postman (`postman/`) | Pruebas manuales de la API: colección con Health, Auth, Documentos y casos de error (409, 415, 401, PDF corrupto/escaneado) |
+
+Importar `postman/SmartDocs-AI.postman_collection.json` y `postman/SmartDocs-Local.postman_environment.json`, ajustar credenciales en el entorno y ejecutar en orden: `Auth → Login` guarda los tokens; `Documentos → Cargar documento` guarda el `document_id` y requiere seleccionar un archivo de `postman/samples/`. Cada request incluye assertions (`pm.test`) sobre el código de estado y el cuerpo esperado.
+
 ---
 
 ## 3. Estructura de tests
