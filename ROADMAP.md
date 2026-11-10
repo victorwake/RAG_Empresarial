@@ -2,7 +2,7 @@
 
 Plan de desarrollo incremental en 10 etapas. Cada etapa debe producir un resultado funcional y verificable antes de avanzar a la siguiente.
 
-> **Estado actual:** Etapas 1–3 cerradas; próxima Etapa 4. Verificación y punto de reanudación: [`docs/status.md`](docs/status.md).
+> **Estado actual:** Etapas 1–4 cerradas; próxima Etapa 5. Verificación y punto de reanudación: [`docs/status.md`](docs/status.md).
 
 - **Duración estimada total:** 15 semanas.
 - **Ritmo asumido:** 5–7 horas semanales, desarrollo individual.
@@ -314,17 +314,17 @@ Cargar PDF, DOCX y TXT por API, listarlos, consultarlos, eliminarlos y reprocesa
 
 ### Tareas
 
-- [ ] Definir interfaz `TextExtractor` con resultado normalizado y metadatos.
-- [ ] Implementar `PDFProcessor` con PyMuPDF.
-- [ ] Implementar `DOCXProcessor` con python-docx.
-- [ ] Implementar `TXTProcessor` con detección de codificación.
-- [ ] Normalizar espacios, saltos de línea y caracteres de control.
-- [ ] Preservar página/sección cuando sea posible.
-- [ ] Detectar documentos sin texto extraíble (posible escaneo) y registrar motivo.
-- [ ] Implementar manejo de errores por archivo y por página.
-- [ ] Registrar resultados y errores en `ProcessingJob`.
-- [ ] Marcar `FAILED` con mensaje accionable.
-- [ ] Tests con archivos de ejemplo válidos, corruptos y vacíos.
+- [x] Definir interfaz `TextExtractor` con resultado normalizado y metadatos.
+- [x] Implementar `PDFProcessor` con PyMuPDF.
+- [x] Implementar `DOCXProcessor` con python-docx.
+- [x] Implementar `TXTProcessor` con detección de codificación.
+- [x] Normalizar espacios, saltos de línea y caracteres de control.
+- [x] Preservar página/sección cuando sea posible.
+- [x] Detectar documentos sin texto extraíble (posible escaneo) y registrar motivo.
+- [x] Implementar manejo de errores por archivo y por página.
+- [x] Registrar resultados y errores en `ProcessingJob`.
+- [x] Marcar `FAILED` con mensaje accionable.
+- [x] Tests con archivos de ejemplo válidos, corruptos y vacíos.
 
 ### Entregables
 

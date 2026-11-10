@@ -117,7 +117,7 @@ Ninguna capa inferior importa capas superiores.
 
 ## 4. Estructura modular del backend
 
-> **Estado:** este árbol es la estructura objetivo. Las tablas de implementación al final de la sección indican qué existe al cerrar las Etapas 2 y 3 y qué se incorpora en etapas posteriores.
+> **Estado:** este árbol es la estructura objetivo. Las tablas de implementación al final de la sección indican qué existe al cerrar las Etapas 2, 3 y 4 y qué se incorpora en etapas posteriores.
 
 ```text
 backend/
@@ -178,7 +178,6 @@ backend/
 │   ├── interfaces/
 │   │   ├── storage.py
 │   │   ├── queue.py
-│   │   ├── extractor.py
 │   │   ├── embeddings.py
 │   │   └── llm.py
 │   ├── rag/
@@ -246,6 +245,17 @@ Pendiente para etapas posteriores: rutas de usuarios/documentos/conversaciones/a
 
 Pendiente para etapas posteriores: extractores de texto y normalización (Etapa 4), chunks y búsqueda vectorial (Etapa 5), motor RAG y conversaciones (Etapa 6), rutas de usuarios/admin, frontend y proxy de despliegue.
 
+### 4.3. Estado de implementación al cerrar la Etapa 4
+
+| Área | Implementado |
+|---|---|
+| Procesamiento documental | `document_processing/base.py` (Protocol `TextExtractor`, `ExtractionResult`, `ensure_extractable`), `pdf_processor.py` (PyMuPDF), `docx_processor.py` (python-docx), `txt_processor.py` (charset-normalizer), `normalizer.py` |
+| Selección por formato | `find_extractor` y `DEFAULT_EXTRACTORS` en `document_processing/__init__.py` |
+| Servicios | `processing_service.py` con extracción real vía `asyncio.to_thread` (reemplaza el stub de ADR-017); completa `documents.page_count` |
+| Tests | `unit/test_normalizer.py`, `unit/test_extractors.py`, `integration/test_processing.py` con PDF/DOCX/TXT reales; builders en `conftest.py` |
+
+Pendiente para etapas posteriores: chunks y búsqueda vectorial (Etapa 5), motor RAG y conversaciones (Etapa 6), rutas de usuarios/admin, frontend y proxy de despliegue.
+
 ---
 
 ## 5. Interfaces de desacoplamiento
@@ -282,17 +292,18 @@ class FileStorage(Protocol):
 ```python
 class TextExtractor(Protocol):
     def supports(self, mime_type: str) -> bool: ...
-    async def extract(self, source) -> ExtractionResult: ...
+    def extract(self, source: bytes) -> ExtractionResult: ...
 ```
 
-`source` puede ser una ruta, un stream (`io.BufferedReader`) o bytes. Para desacoplarlo de `FileStorage`, el `ProcessingService` abre el contenido mediante `FileStorage.open()` y lo pasa al extractor. Evitar que el extractor dependa directamente del sistema de archivos cuando sea posible.
+Los extractores son **síncronos** y reciben los bytes del archivo: el `ProcessingService` abre el contenido mediante `FileStorage.open()` y ejecuta el extractor en un thread con `asyncio.to_thread` para no bloquear el event loop (ADR-018).
 
 `ExtractionResult` contiene:
 
 - `text`: texto completo normalizado.
-- `pages`: lista de `(page_number, text)` cuando aplique.
-- `metadata`: título, autor, secciones detectadas.
-- `warnings`: advertencias no fatales.
+- `pages`: tupla de `ExtractedPage(page_number, text)` cuando el formato tiene paginación.
+- `page_count`: número de páginas o `None` en formatos sin paginación (DOCX/TXT).
+- `metadata`: título y autor cuando el archivo los declara.
+- `warnings`: advertencias no fatales (por página dañada).
 
 ### 5.4. `EmbeddingProvider`
 
@@ -367,7 +378,7 @@ Notas:
 - La respuesta de carga es `202 Accepted`; el estado se consulta por polling.
 - Si el procesamiento falla: `Document = FAILED`, `ProcessingJob = FAILED` con `error_message`.
 - El reproceso elimina chunks previos en una transacción antes de reinsertar.
-- En la Etapa 3 el job de ingesta es un stub: verifica el archivo y completa sin extraer texto ni generar chunks (ADR-017). La extracción se integra en la Etapa 4.
+- Desde la Etapa 4 el job de ingesta extrae y normaliza el texto real con los extractores por formato (ADR-018); el texto extraído no se persiste. El chunking y los embeddings (pasos restantes del diagrama) se incorporan en la Etapa 5.
 
 ### 6.2. Flujo de consulta RAG
 
@@ -584,3 +595,4 @@ Ver [`decisions.md`](decisions.md):
 - ADR-010: umbral de retrieval experimental.
 - ADR-011: refresh tokens revocables persistidos.
 - ADR-017: job de ingesta con stub de extracción en Etapa 3.
+- ADR-018: extractores síncronos y texto extraído no persistido.

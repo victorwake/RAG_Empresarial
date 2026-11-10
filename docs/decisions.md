@@ -510,6 +510,34 @@ La Etapa 3 entrega la gestión documental completa (modelos, almacenamiento, end
 
 ---
 
+## ADR-018: Extractores síncronos y texto extraído no persistido
+
+**Estado:** Aceptada.
+
+**Contexto:**
+
+La Etapa 4 implementa la extracción real de PDF/DOCX/TXT. Las bibliotecas elegidas (PyMuPDF, python-docx, charset-normalizer) son síncronas, y no existe aún una tabla para el texto extraído: la representación persistida del contenido será `document_chunks` en la Etapa 5. Persistir el texto crudo además de los chunks duplicaría almacenamiento sin beneficio para el pipeline.
+
+**Decisión:**
+
+- `TextExtractor` es un Protocol **síncrono** que recibe `bytes` y devuelve `ExtractionResult`; `ProcessingService` lo ejecuta con `asyncio.to_thread` para no bloquear el event loop.
+- El texto extraído es **transitorio**: no se persiste. Al reprocesar se re-extrae del archivo original.
+- `documents.page_count` se completa al procesar; los metadatos y advertencias de extracción se registran en logs, no en la base.
+- Los chunks de la Etapa 5 serán la única representación persistida del contenido.
+
+**Consecuencias:**
+
+- El reproceso re-ejecuta la extracción: costo aceptable porque el archivo permanece en el almacenamiento y la extracción es local y rápida.
+- Un `COMPLETED` solo certifica que el texto era extraíble; el contenido consultable aparece cuando existan chunks.
+- Cambiar a extractores async en el futuro (p. ej. servicios externos u OCR) solo requiere ajustar el envoltorio del servicio, no el contrato ni los tests por formato.
+
+**Alternativas consideradas:**
+
+- Definir `TextExtractor` async: obligaría a envolver bibliotecas síncronas en `asyncio.to_thread` dentro de cada extractor, repitiendo el patrón.
+- Persistir el texto extraído en `documents`: duplica el almacenamiento frente a los chunks y crea dos fuentes de verdad del contenido.
+
+---
+
 ## Plantilla para nuevas decisiones
 
 ```markdown
