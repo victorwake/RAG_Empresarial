@@ -17,7 +17,10 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["JWT_SECRET"] = "test-secret-with-at-least-32-characters-long"
 os.environ["PASSWORD_MIN_LENGTH"] = "12"
 
+from io import BytesIO
+
 import app.models  # noqa: F401  (registra los modelos en el metadata)
+import pymupdf
 import pytest
 import pytest_asyncio
 from app.api.dependencies import get_db, get_file_storage, get_processing_queue
@@ -36,6 +39,7 @@ from app.repositories.document_repository import DocumentRepository
 from app.repositories.organization_repository import OrganizationRepository
 from app.repositories.processing_job_repository import ProcessingJobRepository
 from app.repositories.user_repository import UserRepository
+from docx import Document as DocxDocument
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -46,8 +50,41 @@ get_settings.cache_clear()
 
 DEFAULT_PASSWORD = "Correct-Horse-Battery-9"
 
-PDF_BYTES = b"%PDF-1.7 contenido simulado de un archivo pdf"
-DOCX_BYTES = b"PK\x03\x04 contenido simulado de un archivo docx"
+
+def build_pdf_bytes(*page_texts: str) -> bytes:
+    """Genera un PDF real con una página por texto dado (solo ASCII)."""
+    with pymupdf.open() as document:
+        for text in page_texts:
+            document.new_page().insert_text((72, 72), text)
+        return document.tobytes()
+
+
+def build_scanned_pdf_bytes(page_count: int = 1) -> bytes:
+    """Genera un PDF sin texto que simula una digitalización sin OCR."""
+    with pymupdf.open() as document:
+        for _ in range(page_count):
+            document.new_page()
+        return document.tobytes()
+
+
+def build_docx_bytes(
+    *paragraphs: str, title: str | None = None, author: str | None = None
+) -> bytes:
+    """Genera un DOCX real con los párrafos y metadatos opcionales dados."""
+    document = DocxDocument()
+    if title is not None:
+        document.core_properties.title = title
+    if author is not None:
+        document.core_properties.author = author
+    for paragraph in paragraphs:
+        document.add_paragraph(paragraph)
+    buffer = BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
+
+
+PDF_BYTES = build_pdf_bytes("Contenido simulado de un archivo PDF para las pruebas.")
+DOCX_BYTES = build_docx_bytes("Contenido simulado de un archivo DOCX para las pruebas.")
 TXT_BYTES = b"Contenido de texto plano simulado."
 
 
@@ -199,6 +236,7 @@ async def create_document(
     filename: str = "documento.pdf",
     storage_path: str | None = None,
     content: bytes | None = None,
+    mime_type: str = "application/pdf",
 ) -> Document:
     """Crea un documento con checksum único por llamada."""
     payload = content if content is not None else f"contenido-{uuid.uuid4()}".encode()
@@ -208,7 +246,7 @@ async def create_document(
         filename=filename,
         original_filename=filename,
         storage_path=storage_path or f"{organization.id}/{uuid.uuid4()}.pdf",
-        mime_type="application/pdf",
+        mime_type=mime_type,
         file_size=len(payload),
         checksum=hashlib.sha256(payload).hexdigest(),
     )
