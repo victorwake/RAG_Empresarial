@@ -323,7 +323,9 @@ Elimina el documento, su archivo, sus chunks y sus jobs.
 
 - **Roles:** `ADMIN`.
 - **Response:** `204 No Content`.
-- **Errores:** `404`; `409` si hay un job activo (opcional, según implementación).
+- **Errores:** `404` si no existe o pertenece a otra organización.
+
+> No bloquea por un job activo: los jobs se eliminan en cascada con el documento y un job en vuelo detecta la eliminación y termina sin efecto.
 
 ### 4.5. `POST /api/v1/documents/{id}/reprocess`
 

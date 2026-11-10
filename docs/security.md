@@ -155,16 +155,16 @@ No se acepta de:
 
 ### 4.4. Pruebas obligatorias de aislamiento
 
-- [ ] Listar documentos no devuelve los de otra organización.
-- [ ] Consultar por ID un documento ajeno devuelve `404`.
-- [ ] Eliminar un documento ajeno devuelve `404` y no lo elimina.
-- [ ] Descargar un archivo ajeno devuelve `404`.
+- [x] Listar documentos no devuelve los de otra organización.
+- [x] Consultar por ID un documento ajeno devuelve `404`.
+- [x] Eliminar un documento ajeno devuelve `404` y no lo elimina.
+- [x] Descargar un archivo ajeno devuelve `404`.
 - [ ] El chat no recupera chunks de otra organización aunque el embedding sea similar.
 - [ ] Consultar una conversación ajena devuelve `404`.
 - [ ] Un `ADMIN` de la organización A no puede gestionar usuarios de B.
-- [ ] Enviar `organization_id` en el body no altera el tenant.
+- [x] Enviar `organization_id` en el body no altera el tenant (no existe campo de organización en los endpoints documentales).
 - [ ] Enviar `organization_id` en query no altera el tenant.
-- [ ] Un token manipulado o expirado devuelve `401`.
+- [x] Un token manipulado o expirado devuelve `401`.
 
 ---
 
@@ -279,8 +279,6 @@ Defensas:
 
 > En el MVP los accesos denegados y la actividad se registran en logs estructurados. Una tabla `audit_events` persistente queda como mejora futura para consulta y retención.
 
-> En el MVP los accesos denegados y la actividad se registran en logs estructurados. Una tabla `audit_events` persistente queda como mejora futura para consulta y retención.
-
 ### 8.2. Qué no registrar
 
 - Contraseñas.
@@ -360,11 +358,12 @@ Defensas:
 
 ### Etapa 3
 
-- [ ] Validación de archivos y tamaño.
-- [ ] Nombres saneados y rutas generadas.
-- [ ] Checksum y duplicados.
-- [ ] Borrado de archivo junto con el registro.
-- [ ] FK compuestas y `UNIQUE (organization_id, id)` en las migraciones.
+- [x] Validación de archivos y tamaño (extensión, MIME, firma mágica, tamaño y archivo vacío).
+- [x] Nombres saneados y rutas generadas (UUID en disco, sin path traversal).
+- [x] Checksum y duplicados por organización.
+- [x] Borrado de archivo junto con el registro.
+- [x] FK compuestas y `UNIQUE (organization_id, id)` en las migraciones.
+- [x] Descarga del archivo original validando autenticación y tenant (`Content-Disposition: attachment`).
 
 ### Etapa 5
 

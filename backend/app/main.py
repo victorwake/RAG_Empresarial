@@ -3,6 +3,8 @@
 import logging
 import time
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +16,7 @@ from app.core.config import get_settings
 from app.core.context import clear_context, set_request_id
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import configure_logging
+from app.services.processing_service import reconcile_orphan_jobs
 
 logger = logging.getLogger("app.request")
 
@@ -21,6 +24,12 @@ DESCRIPTION = (
     "Plataforma empresarial de consulta de documentación corporativa basada en RAG. "
     "Las respuestas se generan exclusivamente a partir de las fuentes recuperadas."
 )
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    await reconcile_orphan_jobs()
+    yield
 
 
 def create_app() -> FastAPI:
@@ -34,6 +43,7 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
+        lifespan=lifespan,
     )
 
     app.add_middleware(

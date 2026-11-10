@@ -539,7 +539,7 @@ Notas:
 0005_conversations_messages_message_sources
 ```
 
-**Estado Etapa 2:** `0001` y `0002` implementadas y verificadas. Las migraciones `0003`–`0005` se crean en Etapas 3–6.
+**Estado Etapa 3:** `0001`–`0003` implementadas y verificadas, incluidas las FK compuestas, los `UNIQUE (organization_id, id)` y el índice único parcial de jobs activos. Las migraciones `0004`–`0005` se crean en Etapas 5–6.
 
 ### Cambio de modelo de embeddings
 

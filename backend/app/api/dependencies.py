@@ -1,9 +1,10 @@
-"""Dependencias de autenticación, tenant y sesión de base de datos."""
+"""Dependencias de autenticación, tenant, sesión de base de datos y servicios."""
 
 import uuid
 from collections.abc import AsyncIterator
+from pathlib import Path
 
-from fastapi import Depends
+from fastapi import BackgroundTasks, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +13,8 @@ from app.core.context import TenantContext, set_identity_context
 from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.security import decode_token
 from app.database.session import get_session
+from app.interfaces.queue import FastAPIProcessingQueue, ProcessingQueue
+from app.interfaces.storage import FileStorage, LocalFileStorage
 from app.models.enums import UserRole
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
@@ -22,6 +25,14 @@ _bearer_scheme = HTTPBearer(auto_error=False)
 async def get_db() -> AsyncIterator[AsyncSession]:
     async for session in get_session():
         yield session
+
+
+def get_file_storage(settings: Settings = Depends(get_settings)) -> FileStorage:
+    return LocalFileStorage(Path(settings.file_storage_root))
+
+
+def get_processing_queue(background_tasks: BackgroundTasks) -> ProcessingQueue:
+    return FastAPIProcessingQueue(background_tasks)
 
 
 async def get_current_user(

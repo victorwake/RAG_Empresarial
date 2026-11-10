@@ -23,8 +23,11 @@ class AppError(Exception):
     title = "Error interno"
     headers: dict[str, str] | None = None
 
-    def __init__(self, detail: str | None = None) -> None:
+    def __init__(
+        self, detail: str | None = None, extra: dict[str, Any] | None = None
+    ) -> None:
         self.detail = detail or self.title
+        self.extra = extra
         super().__init__(self.detail)
 
 
@@ -59,6 +62,18 @@ class DomainValidationError(AppError):
     title = "Error de validación"
 
 
+class PayloadTooLargeError(AppError):
+    status_code = 413
+    error_type = "payload-too-large"
+    title = "Archivo demasiado grande"
+
+
+class UnsupportedMediaTypeError(AppError):
+    status_code = 415
+    error_type = "unsupported-media-type"
+    title = "Formato no soportado"
+
+
 class ProcessingError(AppError):
     status_code = 422
     error_type = "processing"
@@ -74,6 +89,7 @@ def _problem(
     detail: str,
     errors: list[dict[str, str]] | None = None,
     headers: dict[str, str] | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> JSONResponse:
     body: dict[str, Any] = {
         "type": f"{ERROR_BASE_URL}/{error_type}",
@@ -85,6 +101,8 @@ def _problem(
     }
     if errors:
         body["errors"] = errors
+    if extra:
+        body.update(extra)
     return JSONResponse(status_code=status_code, content=body, headers=headers)
 
 
@@ -98,6 +116,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             title=exc.title,
             detail=exc.detail,
             headers=exc.headers,
+            extra=exc.extra,
         )
 
     @app.exception_handler(RequestValidationError)

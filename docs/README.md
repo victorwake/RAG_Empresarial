@@ -2,7 +2,7 @@
 
 Índice de la documentación técnica y funcional del proyecto.
 
-> **Estado:** Etapas 1 y 2 cerradas — próxima Etapa 3. Punto de reanudación: [`status.md`](status.md). Los documentos son **vivos**: se actualizan al cerrar cada etapa.
+> **Estado:** Etapas 1–3 cerradas — próxima Etapa 4. Punto de reanudación: [`status.md`](status.md). Los documentos son **vivos**: se actualizan al cerrar cada etapa.
 >
 > Las decisiones que dependen de experimentación están marcadas como **“a validar en Etapa 5”** y no deben tratarse como valores definitivos.
 
