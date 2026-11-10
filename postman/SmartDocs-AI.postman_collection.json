@@ -1,0 +1,861 @@
+{
+	"info": {
+		"_postman_id": "7f4a9d1e-2b3c-4e5f-8a9b-0c1d2e3f4a5b",
+		"name": "SmartDocs AI",
+		"description": "Pruebas manuales de la API REST de SmartDocs AI (Etapas 2-4: autenticación, gestión documental y extracción).\n\n**Requisitos previos** (desde la raíz del repositorio):\n\n1. `docker compose up -d db`\n2. `cd backend && python -m uv sync --dev && python -m uv run alembic upgrade head`\n3. Crear organización y administrador con la CLI (`python -m uv run python -m app.cli create-organization`, `create-admin`).\n4. Levantar la API: `python -m uv run uvicorn app.main:app --reload`.\n\n**Uso:**\n\n- Seleccionar el entorno `SmartDocs Local` y ajustar `organization_slug`, `email` y `password` con los valores creados con la CLI.\n- Ejecutar en orden: `Auth → Login` guarda los tokens automáticamente en variables de colección; `Documentos → Cargar documento` guarda `document_id`.\n- Los requests de carga requieren seleccionar un archivo local: usar las muestras de `postman/samples/`.\n- La carga es asíncrona (`202`): consultar el documento para ver la transición `PENDING → COMPLETED | FAILED`.\n- Los casos de error de PDF corrupto/escaneado verifican `FAILED` con la extracción real de la Etapa 4; si el job aún corre, reintentar la consulta en unos segundos.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "organization_slug",
+			"value": "acme",
+			"type": "string"
+		},
+		{
+			"key": "email",
+			"value": "admin@acme.com",
+			"type": "string"
+		},
+		{
+			"key": "password",
+			"value": "cambia-tu-contrasena",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "document_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Verificar salud",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Health check público: verifica la conexión con la base de datos. Devuelve 200 con `status: ok` o 503 si la base no está disponible."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"health devuelve 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"base de datos operativa\", function () {",
+									"    pm.expect(pm.response.json().database).to.eql(\"ok\");",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"organization_slug\": \"{{organization_slug}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Autentica con `organization_slug` + `email` + `password` y guarda `access_token` y `refresh_token` en variables de colección. Ejecutar primero: el resto de carpetas usa el token guardado. Credenciales inválidas devuelven 401 genérico."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"login devuelve 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"pm.test(\"contiene tokens\", function () {",
+									"    pm.expect(body.access_token).to.be.a(\"string\").and.not.empty;",
+									"    pm.expect(body.refresh_token).to.be.a(\"string\").and.not.empty;",
+									"});",
+									"pm.collectionVariables.set(\"access_token\", body.access_token);",
+									"pm.collectionVariables.set(\"refresh_token\", body.refresh_token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Mi perfil",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Perfil del usuario autenticado (requiere access token)."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"me devuelve 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"email coincide con el login\", function () {",
+									"    pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get(\"email\"));",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Refresh",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Rota el refresh token y actualiza las variables con el par nuevo. Cada refresh revoca el token presentado; reutilizarlo invalida toda la sesión."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"refresh devuelve 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"pm.collectionVariables.set(\"access_token\", body.access_token);",
+									"pm.collectionVariables.set(\"refresh_token\", body.refresh_token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Revoca el refresh token. Es idempotente: un token inválido o ya revocado también devuelve 204. Ejecutar al final de la sesión de pruebas; para continuar, volver a Login."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"logout devuelve 204\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Documentos",
+			"item": [
+				{
+					"name": "Cargar documento",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents"
+							]
+						},
+						"description": "Carga multipart con campo `file` (solo ADMIN). Seleccionar un archivo de `postman/samples/`: `ejemplo.pdf`, `ejemplo.docx` o `ejemplo.txt`. Devuelve 202 y guarda `document_id`. La extracción se ejecuta en background: usar `Consultar documento` para ver el estado. Errores: 409 duplicado, 413 tamaño, 415 extensión, 422 archivo vacío."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"carga devuelve 202\", function () {",
+									"    pm.response.to.have.status(202);",
+									"});",
+									"var body = pm.response.json();",
+									"pm.test(\"estado inicial PENDING\", function () {",
+									"    pm.expect(body.status).to.eql(\"PENDING\");",
+									"});",
+									"pm.collectionVariables.set(\"document_id\", body.id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Listar documentos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents?limit=20&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "status",
+									"value": "COMPLETED",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "informe",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Listado paginado de la organización del token. Habilitar `status` (PENDING, PROCESSING, COMPLETED, FAILED) o `search` (nombre de archivo) según se necesite. Autenticado: cualquier rol ve los metadatos."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"listado devuelve 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var body = pm.response.json();",
+									"pm.test(\"formato paginado\", function () {",
+									"    pm.expect(body).to.have.property(\"items\").that.is.an(\"array\");",
+									"    pm.expect(body).to.have.property(\"total\");",
+									"    pm.expect(body).to.have.property(\"limit\");",
+									"    pm.expect(body).to.have.property(\"offset\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Consultar documento",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents/{{document_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{document_id}}"
+							]
+						},
+						"description": "Consulta el documento cargado: útil para verificar la transición `PENDING → COMPLETED` y el `page_count` extraído (PDF: número de páginas; DOCX/TXT: null). Documento de otra organización: 404."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"consulta devuelve 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"id coincide con document_id\", function () {",
+									"    pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"document_id\"));",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Reprocesar documento",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents/{{document_id}}/reprocess",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{document_id}}",
+								"reprocess"
+							]
+						},
+						"description": "Vuelve el documento a `PENDING` y reencola la extracción (solo ADMIN). Devuelve 409 si ya hay un job activo."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"reproceso devuelve 202\", function () {",
+									"    pm.response.to.have.status(202);",
+									"});",
+									"pm.test(\"estado vuelve a PENDING\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"PENDING\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Descargar archivo original",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents/{{document_id}}/file",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{document_id}}",
+								"file"
+							]
+						},
+						"description": "Devuelve el archivo original como `application/octet-stream` con `Content-Disposition` (disponible para ADMIN y USER)."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"descarga devuelve 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"content-type octet-stream\", function () {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/octet-stream\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Borrar documento",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents/{{document_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{document_id}}"
+							]
+						},
+						"description": "Elimina el documento, su archivo y sus jobs (solo ADMIN). Ejecutar al final del flujo: los requests siguientes de `document_id` dejarán de existir."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"borrado devuelve 204\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "Casos de error",
+			"item": [
+				{
+					"name": "Cargar duplicado (409)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents"
+							]
+						},
+						"description": "Seleccionar el mismo `ejemplo.pdf` ya cargado en `Documentos → Cargar documento` (mismo checksum en la organización). Devuelve 409 con `existing_document_id` en el detalle."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"duplicado devuelve 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cargar extensión inválida (415)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents"
+							]
+						},
+						"description": "Seleccionar `postman/samples/ejemplo_invalido.md`: la extensión `.md` no está en `ALLOWED_EXTENSIONS` (pdf, docx, txt) y se rechaza con 415."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"extensión no permitida devuelve 415\", function () {",
+									"    pm.response.to.have.status(415);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cargar PDF corrupto (202)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents"
+							]
+						},
+						"description": "Seleccionar `postman/samples/corrupto.pdf`: la firma `%PDF-` pasa la validación de carga, por lo que se acepta con 202 y guarda `document_id`. El fallo ocurre después, en el job de extracción."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"carga de corrupto devuelve 202\", function () {",
+									"    pm.response.to.have.status(202);",
+									"});",
+									"pm.collectionVariables.set(\"document_id\", pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Consultar corrupto (FAILED)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents/{{document_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{document_id}}"
+							]
+						},
+						"description": "El job marca el documento `FAILED` con \"El archivo PDF está corrupto o no puede abrirse.\". El procesamiento es en background: si sigue `PENDING`/`PROCESSING`, reintentar en unos segundos."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"consulta devuelve 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"documento en FAILED\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"FAILED\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Cargar PDF escaneado (202)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents"
+							]
+						},
+						"description": "Seleccionar `postman/samples/escaneado.pdf` (página en blanco, sin texto): se acepta con 202 y guarda `document_id`."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"carga de escaneado devuelve 202\", function () {",
+									"    pm.response.to.have.status(202);",
+									"});",
+									"pm.collectionVariables.set(\"document_id\", pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Consultar escaneado (FAILED)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents/{{document_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents",
+								"{{document_id}}"
+							]
+						},
+						"description": "El job marca el documento `FAILED` con \"El PDF no contiene texto extraíble; puede requerir OCR.\" (OCR fuera de alcance en el MVP). Reintentar si sigue en `PENDING`/`PROCESSING`."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"consulta devuelve 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"documento en FAILED\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"FAILED\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Listar sin token (401)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"auth": {
+							"type": "noauth"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/documents",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"documents"
+							]
+						},
+						"description": "Request con autenticación deshabilitada: los endpoints protegidos responden 401 con token ausente o inválido."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"sin token devuelve 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{access_token}}",
+						"type": "string"
+					}
+				]
+			}
+		}
+	]
+}
