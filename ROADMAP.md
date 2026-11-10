@@ -2,7 +2,7 @@
 
 Plan de desarrollo incremental en 10 etapas. Cada etapa debe producir un resultado funcional y verificable antes de avanzar a la siguiente.
 
-> **Estado actual:** Etapas 1 y 2 cerradas; próxima Etapa 3. Verificación y punto de reanudación: [`docs/status.md`](docs/status.md).
+> **Estado actual:** Etapas 1–3 cerradas; próxima Etapa 4. Verificación y punto de reanudación: [`docs/status.md`](docs/status.md).
 
 - **Duración estimada total:** 15 semanas.
 - **Ritmo asumido:** 5–7 horas semanales, desarrollo individual.
@@ -247,22 +247,22 @@ backend/
 
 ### Tareas
 
-- [ ] Crear entidades `Document` y `ProcessingJob` con sus migraciones.
-- [ ] Aplicar claves foráneas compuestas obligatorias (`documents`-`users`, `document_chunks`-`documents`, `conversations`-`users`, `processing_jobs`-`documents`) con `UNIQUE (organization_id, id)` en tablas padre, según `docs/database.md §5.3`.
-- [ ] Implementar `FileStorage` (interfaz) y `LocalFileStorage`.
-- [ ] Implementar carga multipart con validación de extensión, MIME y tamaño, protegida con RBAC (`ADMIN`).
-- [ ] Calcular checksum SHA-256 y detectar duplicados por organización (RF-013 como `Must`).
-- [ ] Sanitizar nombres de archivo y evitar path traversal.
-- [ ] Registrar metadatos y estado inicial `PENDING`.
-- [ ] Implementar `ProcessingQueue` (interfaz) y `FastAPIProcessingQueue` como implementación **temporal no durable**.
-- [ ] Implementar listado paginado, consulta individual y eliminación.
-- [ ] Implementar reproceso (limpia chunks previos y reencola).
-- [ ] Implementar transiciones de estado `PENDING → PROCESSING → COMPLETED | FAILED`.
-- [ ] Reconciliar jobs huérfanos en `PENDING` y `PROCESSING` al arranque (marcar `FAILED` con motivo de interrupción y permitir reproceso).
-- [ ] Garantizar que cada tarea cree su propia sesión de SQLAlchemy (sin reutilizar la sesión de la request).
-- [ ] Transición atómica `PENDING -> PROCESSING` con control de intentos (`attempts++`).
-- [ ] Asociar `uploaded_by` y `organization_id` derivados del usuario autenticado (nunca del cliente).
-- [ ] Tests de carga, validación, duplicados, borrado y estados.
+- [x] Crear entidades `Document` y `ProcessingJob` con sus migraciones (`0003_documents_y_processing_jobs`).
+- [x] Aplicar claves foráneas compuestas obligatorias (`documents`-`users`, `processing_jobs`-`documents`) con `UNIQUE (organization_id, id)` en tablas padre, según `docs/database.md §5.3`. Las FK compuestas de `document_chunks` y `conversations` se aplican cuando esas tablas se creen (Etapas 5–6).
+- [x] Implementar `FileStorage` (interfaz) y `LocalFileStorage`.
+- [x] Implementar carga multipart con validación de extensión, MIME y tamaño, protegida con RBAC (`ADMIN`).
+- [x] Calcular checksum SHA-256 y detectar duplicados por organización (RF-013 como `Must`).
+- [x] Sanitizar nombres de archivo y evitar path traversal.
+- [x] Registrar metadatos y estado inicial `PENDING`.
+- [x] Implementar `ProcessingQueue` (interfaz) y `FastAPIProcessingQueue` como implementación **temporal no durable**.
+- [x] Implementar listado paginado, consulta individual y eliminación.
+- [x] Implementar reproceso (reencola; la limpieza de chunks previos aplica cuando existan chunks en Etapa 5).
+- [x] Implementar transiciones de estado `PENDING → PROCESSING → COMPLETED | FAILED`.
+- [x] Reconciliar jobs huérfanos en `PENDING` y `PROCESSING` al arranque (marcar `FAILED` con motivo de interrupción y permitir reproceso).
+- [x] Garantizar que cada tarea cree su propia sesión de SQLAlchemy (sin reutilizar la sesión de la request).
+- [x] Transición atómica `PENDING -> PROCESSING` con control de intentos (`attempts++`).
+- [x] Asociar `uploaded_by` y `organization_id` derivados del usuario autenticado (nunca del cliente).
+- [x] Tests de carga, validación, duplicados, borrado y estados.
 
 ### Endpoints
 
@@ -272,6 +272,7 @@ GET    /api/v1/documents
 GET    /api/v1/documents/{id}
 DELETE /api/v1/documents/{id}
 POST   /api/v1/documents/{id}/reprocess
+GET    /api/v1/documents/{id}/file
 ```
 
 ### Limitación conocida: BackgroundTasks
@@ -294,6 +295,10 @@ POST   /api/v1/documents/{id}/reprocess
 - Listado y administración.
 - Validaciones y estados.
 - Almacenamiento local abstraído.
+
+### Nota de implementación
+
+El job de ingesta implementado en esta etapa es un **stub**: verifica el archivo, transiciona estados y marca el documento `COMPLETED` sin extraer texto ni generar chunks (ADR-017). La extracción real se integra en la Etapa 4 sobre la misma estructura de jobs.
 
 ### Criterio de finalización
 

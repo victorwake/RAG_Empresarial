@@ -62,20 +62,24 @@ Estrategia de pruebas del backend, frontend, seguridad y calidad del pipeline RA
 
 ## 3. Estructura de tests
 
-Estructura implementada en la Etapa 2:
+Estructura implementada en las Etapas 2 y 3:
 
 ```text
 backend/tests/
 ├── conftest.py              # fixtures, helpers y reset de esquema
 ├── unit/
-│   └── test_security_utils.py
+│   ├── test_security_utils.py
+│   └── test_file_validation.py
 ├── integration/
-│   └── test_auth.py
+│   ├── test_auth.py
+│   ├── test_documents.py
+│   └── test_processing.py
 └── security/
-    └── test_tenant_isolation.py
+    ├── test_tenant_isolation.py
+    └── test_document_isolation.py
 ```
 
-Las factories son funciones auxiliares (`create_organization`, `create_user`) dentro de `conftest.py`; no existe un paquete `tests/factories/`. Las carpetas de documentos, RAG, rendimiento y fixtures binarios se incorporan en etapas posteriores.
+Las factories son funciones auxiliares (`create_organization`, `create_user`, `create_document`, `create_processing_job`) dentro de `conftest.py`; no existe un paquete `tests/factories/`. Las carpetas de RAG, rendimiento y fixtures binarios en disco se incorporan en etapas posteriores.
 
 Frontend:
 
@@ -101,20 +105,23 @@ frontend/src/
 
 ### 4.2. Fixtures principales
 
-Implementadas en la Etapa 2:
+Implementadas en las Etapas 2 y 3:
 
 - `db_session`: sesión transaccional con rollback.
 - `client`: `AsyncClient` con la app y `get_db` sobrescrito.
+- `strict_client`: variante con `MAX_UPLOAD_MB = 1` para tests de tamaño de archivo.
 - `org_a`, `org_b`: dos organizaciones distintas (`acme`, `globex`).
 - `admin_a`, `user_a`, `admin_b`: usuarios de prueba; los emails usan dominios `.com` porque `email-validator` rechaza `.test`.
-- `create_organization`, `create_user`: helpers para crear datos dentro de un test.
+- `create_organization`, `create_user`, `create_document`, `create_processing_job`: helpers para crear datos dentro de un test.
+- `auth_headers(user)`: cabecera `Authorization` para un usuario.
+- `FakeProcessingQueue`: cola falsa que registra los encolados para inspección.
+- `PDF_BYTES`, `DOCX_BYTES`, `TXT_BYTES`: contenidos binarios válidos de prueba.
 
 Previstas para etapas posteriores:
 
 - `document_completed`: documento con chunks y embeddings de prueba.
 - `fake_embedding_provider`: vectores deterministas.
 - `fake_llm_provider`: respuestas controladas.
-- `auth_headers(user)`: cabecera `Authorization`.
 
 ### 4.3. Determinismo
 
@@ -147,8 +154,8 @@ Previstas para etapas posteriores:
 
 - Autenticación: login, refresh, logout, token expirado, usuario inactivo.
 - Usuarios: creación, duplicado por organización, cambio de rol, auto-desactivación.
-- Documentos: carga válida, extensión inválida, tamaño excedido, duplicado, borrado, reproceso.
-- Procesamiento: extracción PDF/DOCX/TXT, archivo corrupto, PDF sin texto, reconciliación al arranque de jobs `PENDING`/`PROCESSING`.
+- Documentos: carga válida, extensión inválida, tamaño excedido, duplicado, borrado, reproceso y descarga (implementados en Etapa 3).
+- Procesamiento: reconciliación al arranque de jobs `PENDING`/`PROCESSING`, claim atómico e idempotencia (implementados en Etapa 3); extracción PDF/DOCX/TXT, archivo corrupto y PDF sin texto (Etapa 4).
 - Persistencia: chunks, estados de documento y job.
 - Conversaciones: creación, listado, detalle, borrado, ownership.
 - Chat: respuesta con fuentes, `NO_INFO`, error del proveedor.
@@ -167,7 +174,7 @@ uv run alembic upgrade head
 
 - Verificar `downgrade` de las migraciones críticas.
 - Verificar extensiones `vector` y `citext`.
-- Verificar `UNIQUE (organization_id, id)`, FKs compuestas y el índice único parcial de jobs activos cuando se implementen en Etapa 3.
+- Verificar `UNIQUE (organization_id, id)`, FKs compuestas y el índice único parcial de jobs activos (verificados en la migración `0003` de la Etapa 3).
 
 ---
 

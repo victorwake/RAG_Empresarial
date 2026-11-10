@@ -117,7 +117,7 @@ Ninguna capa inferior importa capas superiores.
 
 ## 4. Estructura modular del backend
 
-> **Estado:** este árbol es la estructura objetivo. La tabla de implementación al final de la sección indica qué existe al cerrar la Etapa 2 y qué se incorpora en etapas posteriores.
+> **Estado:** este árbol es la estructura objetivo. Las tablas de implementación al final de la sección indican qué existe al cerrar las Etapas 2 y 3 y qué se incorpora en etapas posteriores.
 
 ```text
 backend/
@@ -198,7 +198,8 @@ backend/
 ├── migrations/
 │   └── versions/
 │       ├── 0001_extensions_y_organizations.py
-│       └── 0002_users_y_refresh_tokens.py
+│       ├── 0002_users_y_refresh_tokens.py
+│       └── 0003_documents_y_processing_jobs.py
 ├── tests/
 │   ├── conftest.py
 │   ├── unit/
@@ -228,6 +229,22 @@ backend/
 | Infraestructura | `Dockerfile`, `docker-compose.yml`, `docker/postgres/init-test-db.sql` |
 
 Pendiente para etapas posteriores: rutas de usuarios/documentos/conversaciones/admin, modelos y repositorios documentales, interfaces de storage/queue/extractores, pipeline RAG, frontend y proxy de despliegue.
+
+### 4.2. Estado de implementación al cerrar la Etapa 3
+
+| Área | Implementado |
+|---|---|
+| API | `app/api/routes/documents.py` (carga, listado, consulta, eliminación, reproceso y descarga) |
+| Core | `exceptions.py` con soporte de `extra`, `PayloadTooLargeError` (413) y `UnsupportedMediaTypeError` (415) |
+| Modelos | `Document`, `ProcessingJob` |
+| Migraciones | `0003_documents_y_processing_jobs` con FK compuestas, `UNIQUE (organization_id, id)` e índice único parcial de jobs activos |
+| Repositorios | `document_repository.py`, `processing_job_repository.py` (claim atómico `PENDING` → `PROCESSING`) |
+| Servicios y schemas | `document_service.py`, `processing_service.py` (reconciliación al arranque), `file_validation.py`, `schemas/document.py` |
+| Interfaces | `storage.py` (`FileStorage` + `LocalFileStorage`), `queue.py` (`ProcessingQueue` + `FastAPIProcessingQueue`) |
+| Lifespan | `reconcile_orphan_jobs` al arrancar la aplicación |
+| Tests | `unit/test_file_validation.py`, `integration/test_documents.py`, `integration/test_processing.py`, `security/test_document_isolation.py` |
+
+Pendiente para etapas posteriores: extractores de texto y normalización (Etapa 4), chunks y búsqueda vectorial (Etapa 5), motor RAG y conversaciones (Etapa 6), rutas de usuarios/admin, frontend y proxy de despliegue.
 
 ---
 
@@ -350,6 +367,7 @@ Notas:
 - La respuesta de carga es `202 Accepted`; el estado se consulta por polling.
 - Si el procesamiento falla: `Document = FAILED`, `ProcessingJob = FAILED` con `error_message`.
 - El reproceso elimina chunks previos en una transacción antes de reinsertar.
+- En la Etapa 3 el job de ingesta es un stub: verifica el archivo y completa sin extraer texto ni generar chunks (ADR-017). La extracción se integra en la Etapa 4.
 
 ### 6.2. Flujo de consulta RAG
 
@@ -565,3 +583,4 @@ Ver [`decisions.md`](decisions.md):
 - ADR-009: `FileStorage` local inicial.
 - ADR-010: umbral de retrieval experimental.
 - ADR-011: refresh tokens revocables persistidos.
+- ADR-017: job de ingesta con stub de extracción en Etapa 3.

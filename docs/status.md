@@ -2,10 +2,10 @@
 
 Punto único de reanudación. Actualizar al cerrar cada etapa.
 
-- **Actualizado:** 2026-11-08
-- **Rama:** `feat/etapa-2-backend-base`
-- **Etapa actual:** Etapa 2 cerrada; Etapa 3 es la siguiente.
-- **Commit:** ver `git log -1 --oneline`. El cierre de Etapa 2 se commitea junto con estos documentos.
+- **Actualizado:** 2026-11-10
+- **Rama:** `feat/etapa-3-gestion-documental`
+- **Etapa actual:** Etapa 3 cerrada; Etapa 4 es la siguiente.
+- **Commit:** ver `git log -1 --oneline`. El cierre de Etapa 3 se commitea junto con estos documentos.
 
 ---
 
@@ -15,23 +15,24 @@ Punto único de reanudación. Actualizar al cerrar cada etapa.
 |---|---|
 | 1 — Análisis y planificación | Cerrada |
 | 2 — Backend, infraestructura y autenticación básica | Cerrada |
-| 3 — Gestión documental | Próxima |
+| 3 — Gestión documental | Cerrada |
+| 4 — Extracción y procesamiento | Próxima |
 
 ---
 
-## 2. Entregado en la Etapa 2
+## 2. Entregado en la Etapa 3
 
-- FastAPI con estructura modular, configuración por entorno y Swagger.
-- PostgreSQL 16 + pgvector con Docker Compose y healthcheck.
-- SQLAlchemy 2.0 async, sesión por request y Alembic.
-- Modelos `Organization`, `User` y `RefreshToken`.
-- Auth: login con `organization_slug`, refresh rotativo, logout idempotente y `GET /auth/me`.
-- Access token JWT corto; refresh token JWT con `jti`/`ver` y hash SHA-256 persistido.
-- Argon2id, política mínima de contraseña, 401 genérico y `TenantContext`.
-- Logging estructurado con `request_id`, manejo global de errores y CORS.
-- CLI `create-organization` y `create-admin`.
-- Dockerfile multi-stage no-root, Compose, `.dockerignore` y `requirements.txt` de respaldo.
-- Tests unitarios, de integración y de aislamiento por organización.
+- Entidades `Document` y `ProcessingJob` con migración `0003_documents_y_processing_jobs`.
+- FK compuestas y `UNIQUE (organization_id, id)` en `documents` y `processing_jobs`; índice único parcial de jobs activos por documento.
+- `FileStorage` (Protocol) y `LocalFileStorage` con nombres generados por el sistema y protección contra path traversal.
+- `ProcessingQueue` (Protocol) y `FastAPIProcessingQueue` no durable sobre `BackgroundTasks` (ADR-004).
+- Carga multipart con validación de extensión, MIME, firma mágica, tamaño y checksum SHA-256; detección de duplicados por organización (`409` con `existing_document_id`).
+- Endpoints de documentos: carga, listado paginado, consulta, eliminación, reproceso y descarga del archivo original.
+- Transiciones de estado `PENDING → PROCESSING → COMPLETED | FAILED` con claim atómico e `attempts`.
+- Reconciliación de jobs huérfanos al arranque (marcan `FAILED` con motivo de interrupción).
+- Job de ingesta con stub de extracción: completa el documento sin extraer texto (ADR-017; extracción real en Etapa 4).
+- Tests unitarios de validación, integración de endpoints/procesamiento y aislamiento por organización en documentos.
+- Excepciones nuevas: `413 Payload Too Large` y `415 Unsupported Media Type` con soporte de `extra` en `AppError`.
 
 ---
 
@@ -39,13 +40,12 @@ Punto único de reanudación. Actualizar al cerrar cada etapa.
 
 Última ejecución local:
 
-- **Tests:** 24 pasan.
-- **Cobertura:** 81 %.
+- **Tests:** 87 pasan.
+- **Cobertura:** 87 % total; módulos nuevos de Etapa 3 mayoritariamente al 100 % (routes/documents, document_service, repositorios y schemas al 100 %).
 - **Ruff:** sin errores.
-- **Migraciones:** `upgrade` y `downgrade` verificados.
-- **Docker:** imagen de API construida y healthy; `GET /health` responde 200.
-- **Alembic en contenedor:** `0002_users_y_refresh_tokens (head)`.
-- **CLI:** probado contra `smartdocs_test`, incluida la validación de organización duplicada.
+- **Migraciones:** ciclo `upgrade head → downgrade base → upgrade head` verificado en una base desechable.
+- **Alembic:** `0003_documents_y_processing_jobs (head)` aplicada en la base de desarrollo `smartdocs`.
+- **Docker:** contenedor `smartdocs-db` en ejecución; la imagen de API no se reconstruyó en esta etapa.
 
 Comandos de referencia:
 
@@ -72,37 +72,37 @@ docker compose run --rm api alembic current
 ## 4. Entorno local
 
 - Python 3.12.16 instalado por `uv`.
-- PostgreSQL de desarrollo: `smartdocs` en `localhost:5432`.
+- PostgreSQL de desarrollo: `smartdocs` en `localhost:5432`, con migración `0003` aplicada.
 - Base de tests: `smartdocs_test` en el mismo contenedor; creada por `docker/postgres/init-test-db.sql`.
 - `.env` local no versionado; `.env.example` es la plantilla.
-- Contenedor `smartdocs-db` puede quedar corriendo; `smartdocs-api` se detuvo tras la validación.
+- Contenedor `smartdocs-db` puede quedar corriendo; `smartdocs-api` se detuvo tras la validación de Etapa 2.
 - Los emails de prueba usan dominios `.com`; `email-validator` rechaza `.test`.
 
 ---
 
 ## 5. Desviaciones y deuda conocida
 
+- El job de procesamiento es un stub: marca el documento `COMPLETED` sin extraer texto ni generar chunks (ADR-017). La extracción real se implementa en Etapa 4.
+- La cola `FastAPIProcessingQueue` no es durable; se compensa con reconciliación al arranque, claim atómico y reproceso manual.
+- `DELETE /documents/{id}` no bloquea por job activo: los jobs se eliminan en cascada y el job en vuelo detecta la eliminación y termina limpiamente.
 - Las migraciones se ejecutan manualmente; el entrypoint automático queda como decisión futura.
 - La suite de tests crea el esquema con `create_all`/`drop_all`; las migraciones se verifican por separado (ADR-016).
 - Rate limiting y protección contra fuerza bruta quedan para una etapa posterior.
-- La cola de procesamiento se implementará en la Etapa 3 con `BackgroundTasks`; no será durable.
-- No existen aún proxy TLS, frontend, almacenamiento abstracto ni pipeline RAG.
-- El refresh token se guarda hasheado; el token en claro solo lo posee el cliente.
+- No existen aún extractores de texto, chunks, pipeline RAG, proxy TLS ni frontend.
 
 ---
 
-## 6. Próximo paso: Etapa 3 — Gestión documental
+## 6. Próximo paso: Etapa 4 — Extracción y procesamiento
 
-1. Crear entidades `Document` y `ProcessingJob` con migración `0003`.
-2. Aplicar FK compuestas y `UNIQUE (organization_id, id)` según `docs/database.md`.
-3. Implementar `FileStorage` y `LocalFileStorage`.
-4. Implementar carga multipart con validación de extensión, MIME, tamaño, checksum y duplicados.
-5. Implementar listado, consulta, eliminación y reproceso.
-6. Implementar `ProcessingQueue` y `FastAPIProcessingQueue` no durable.
-7. Implementar transiciones de estado y reconciliación de jobs huérfanos.
-8. Agregar tests de carga, validación, duplicados, borrado y estados.
+1. Definir la interfaz `TextExtractor` con resultado normalizado y metadatos.
+2. Implementar `PDFProcessor` (PyMuPDF), `DOCXProcessor` (python-docx) y `TXTProcessor` con detección de codificación.
+3. Normalizar espacios, saltos de línea y caracteres de control; preservar página/sección.
+4. Detectar documentos sin texto extraíble y registrar el motivo.
+5. Integrar la extracción en `ProcessingService.run_job` reemplazando el stub de Etapa 3.
+6. Manejo de errores por archivo y por página; `FAILED` con mensaje accionable.
+7. Tests con archivos de ejemplo válidos, corruptos y vacíos.
 
-Criterio de cierre: cargar PDF, DOCX y TXT por API, listarlos, consultarlos, eliminarlos y reprocesarlos con estados correctos.
+Criterio de cierre: cargar un archivo de cada formato y obtener su contenido textual correctamente extraído, con metadatos y errores controlados.
 
 ---
 

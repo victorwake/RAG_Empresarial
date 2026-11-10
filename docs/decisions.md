@@ -28,6 +28,7 @@ Registro de decisiones estructurales, su contexto, consecuencias y estado.
 | [ADR-014](#adr-014-python-312--uv--ruff) | Python 3.12 + uv + Ruff | Aceptada |
 | [ADR-015](#adr-015-login-con-organization_slug-y-claves-foráneas-compuestas) | Login con `organization_slug` y claves foráneas compuestas | Aceptada |
 | [ADR-016](#adr-016-esquema-de-tests-con-create_all-y-migraciones-verificadas-aparte) | Esquema de tests con `create_all` y migraciones verificadas aparte | Aceptada |
+| [ADR-017](#adr-017-job-de-ingesta-con-stub-de-extracción-en-etapa-3) | Job de ingesta con stub de extracción en Etapa 3 | Aceptada |
 
 ---
 
@@ -479,6 +480,33 @@ La suite de integración necesita una base PostgreSQL real y un esquema limpio p
 - Aplicar migraciones en cada sesión de tests: más fiel al esquema real, pero más lento y frágil ante fallos de migración.
 - SQLite en memoria: descartado por falta de `vector`, `citext` y comportamiento real de PostgreSQL.
 - `testcontainers`: útil en CI, pero agrega complejidad innecesaria para el entorno local actual.
+
+---
+
+## ADR-017: Job de ingesta con stub de extracción en Etapa 3
+
+**Estado:** Aceptada.
+
+**Contexto:**
+
+La Etapa 3 entrega la gestión documental completa (modelos, almacenamiento, endpoints, cola, transiciones de estado y reconciliación), pero la extracción de texto real de PDF/DOCX/TXT corresponde a la Etapa 4. Se necesita un flujo verificable de extremo a extremo sin adelantar los extractores.
+
+**Decisión:**
+
+- El job de ingesta (`ProcessingService.run_job`) verifica el archivo (existencia, tamaño no vacío), transiciona `PENDING → PROCESSING → COMPLETED` y **no extrae texto ni genera chunks**.
+- `documents.page_count` queda `NULL` hasta que exista extracción.
+- El contrato de jobs, estados, cola y endpoints es definitivo; la Etapa 4 reemplaza el cuerpo del job por la extracción real sin cambiar modelos ni endpoints.
+
+**Consecuencias:**
+
+- La Etapa 3 se cierra con un ciclo verificable: carga → job → `COMPLETED`, incluida reconciliación, claim atómico, idempotencia y reproceso.
+- Un documento `COMPLETED` durante la Etapa 3 no tiene texto indexado; el reproceso manual tras la Etapa 4 lo procesa con extracción real.
+- Los tests de procesamiento validan estados y fallos, no contenido extraído.
+
+**Alternativas consideradas:**
+
+- Implementar extractores mínimos en la Etapa 3: mezcla alcances y duplica el trabajo planificado para la Etapa 4.
+- Dejar los documentos en `PENDING` sin ejecutar jobs: no permite validar la cola, la reconciliación ni el reproceso.
 
 ---
 

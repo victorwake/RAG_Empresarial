@@ -4,7 +4,7 @@ Plataforma empresarial de consulta inteligente de documentación corporativa bas
 
 SmartDocs AI permite cargar documentos internos (PDF, DOCX y TXT), procesarlos, indexarlos y consultarlos mediante un asistente conversacional que responde **exclusivamente** con información recuperada de esas fuentes, citando los documentos y fragmentos utilizados.
 
-> **Estado actual:** Etapas 1 y 2 cerradas. Próxima: Etapa 3 — gestión documental. Punto de reanudación y verificación: [`docs/status.md`](docs/status.md).
+> **Estado actual:** Etapas 1–3 cerradas (backend base + gestión documental). Próxima: Etapa 4 — extracción y procesamiento. Punto de reanudación y verificación: [`docs/status.md`](docs/status.md).
 >
 > Este repositorio se construirá de forma incremental. Cada etapa debe dejar un resultado funcional y verificable antes de avanzar.
 
@@ -139,7 +139,7 @@ smartdocs-ai/
 └── ROADMAP.md
 ```
 
-La estructura del backend se creó en la Etapa 2; el frontend se incorpora en la Etapa 7. El detalle real y el estado por archivo están en [`docs/status.md`](docs/status.md) y [`docs/architecture.md`](docs/architecture.md).
+La estructura del backend se creó en las Etapas 2 y 3; el frontend se incorpora en la Etapa 7. El detalle real y el estado por archivo están en [`docs/status.md`](docs/status.md) y [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
