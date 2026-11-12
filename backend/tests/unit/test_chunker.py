@@ -1,8 +1,7 @@
 """Tests unitarios del chunker."""
 
-import pytest
 
-from app.rag.chunker import Chunk, chunk_text
+from app.rag.chunker import chunk_text
 
 
 class TestChunkText:

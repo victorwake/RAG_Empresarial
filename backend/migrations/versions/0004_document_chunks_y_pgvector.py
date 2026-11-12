@@ -88,7 +88,10 @@ def upgrade() -> None:
     )
 
     # Alterar la columna para usar el tipo vector(N) de pgvector
-    op.execute(f"ALTER TABLE document_chunks ALTER COLUMN embedding TYPE vector({dim}) USING embedding::vector({dim})")
+    op.execute(
+        f"ALTER TABLE document_chunks ALTER COLUMN embedding "
+        f"TYPE vector({dim}) USING embedding::vector({dim})"
+    )
 
     op.create_index(
         "ix_document_chunks_document_id", "document_chunks", ["document_id"]

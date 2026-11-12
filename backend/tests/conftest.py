@@ -27,6 +27,7 @@ from app.api.dependencies import (
     get_db,
     get_embedding_provider,
     get_file_storage,
+    get_llm_provider,
     get_processing_queue,
 )
 from app.core.config import Settings, get_settings
@@ -47,7 +48,6 @@ from app.repositories.user_repository import UserRepository
 from docx import Document as DocxDocument
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from pgvector.asyncpg import register_vector
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -140,6 +140,36 @@ class FakeEmbeddingProvider:
         return values[: self._dimension]
 
 
+class FakeLLMProvider:
+    """Proveedor falso de LLM para tests sin llamadas reales."""
+
+    def __init__(self, response_text: str = "Respuesta generada por el modelo de prueba.") -> None:
+        self._response_text = response_text
+        self._call_count = 0
+
+    @property
+    def model_name(self) -> str:
+        return "fake-llm-test"
+
+    async def generate(
+        self,
+        system_prompt: str,
+        user_message: str,
+        *,
+        timeout_seconds: int = 30,
+    ):
+        from app.rag.llm_provider import LLMResponse
+
+        self._call_count += 1
+        return LLMResponse(
+            text=self._response_text,
+            prompt_tokens=len(system_prompt) // 4,
+            completion_tokens=len(self._response_text) // 4,
+            latency_ms=100,
+            model=self.model_name,
+        )
+
+
 class FakeProcessingQueue:
     """Cola falsa: registra los encolados sin ejecutar trabajos."""
 
@@ -210,6 +240,7 @@ def _build_application(
     application.dependency_overrides[get_file_storage] = lambda: storage
     application.dependency_overrides[get_processing_queue] = lambda: queue
     application.dependency_overrides[get_embedding_provider] = lambda: FakeEmbeddingProvider()
+    application.dependency_overrides[get_llm_provider] = lambda: FakeLLMProvider()
     if settings is not None:
         application.dependency_overrides[get_settings] = lambda: settings
     return application

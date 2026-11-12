@@ -2,10 +2,10 @@
 
 Punto único de reanudación. Actualizar al cerrar cada etapa.
 
-- **Actualizado:** 2026-11-11 (pruebas con Docker verificadas)
-- **Rama:** `feat/etapa-5-embeddings`
-- **Etapa actual:** Etapa 5 cerrada y verificada con Docker; Etapa 6 es la siguiente.
-- **Commit:** ver `git log -1 --oneline`. El cierre de Etapa 5 se commitea junto con estos documentos.
+- **Actualizado:** 2026-11-11 (Etapa 6 verificada con Docker)
+- **Rama:** `feat/etapa-6-motor-rag`
+- **Etapa actual:** Etapa 6 cerrada y verificada con Docker; Etapa 7 es la siguiente.
+- **Commit:** ver `git log -1 --oneline`. El cierre de Etapa 6 se commitea junto con estos documentos.
 
 ---
 
@@ -18,10 +18,29 @@ Punto único de reanudación. Actualizar al cerrar cada etapa.
 | 3 — Gestión documental | Cerrada |
 | 4 — Extracción y procesamiento | Cerrada |
 | 5 — Embeddings y búsqueda vectorial | Cerrada |
+| 6 — Motor RAG | Cerrada |
 
 ---
 
-## 2. Entregado en la Etapa 5
+## 2. Entregado en la Etapa 6
+
+- Interfaz `LLMProvider` (Protocol) en `app/rag/llm_provider.py` con `model_name` y `generate(system_prompt, user_message)`.
+- `GeminiLLMProvider` en `app/rag/gemini_llm.py` con timeouts, reintentos con backoff exponencial, `from_settings` y extracción de tokens/latencia.
+- Prompt builder versionado en `app/rag/prompt_builder.py`: `SYSTEM_PROMPT_V1` con reglas anti prompt injection, `build_context_text` con límites de tokens, `build_full_prompt` que devuelve `(system, user)`.
+- `RAGService` en `app/services/rag_service.py`: orquesta retrieval → política NO_INFO → prompt → LLM → validación → persistencia. Crea conversaciones automáticamente, persiste mensajes y fuentes.
+- Modelos `Conversation`, `Message`, `MessageSource` con FK compuestas, CHECK constraints e índices según `database.md`.
+- Migración `0005_conversations_y_mensajes` con tipos enum, tablas, FK, índices y CASCADE.
+- Endpoints: `POST /api/v1/chat` (pregunta RAG), `GET /api/v1/chat/conversations` (lista), `GET /api/v1/chat/conversations/{id}` (detalle con mensajes).
+- Schemas `ChatRequest`, `ChatResponse`, `ChatSource`, `ConversationSummary`, `ConversationsListResponse`, `MessageItem`, `ConversationDetailResponse`.
+- `get_llm_provider()` en `app/api/dependencies.py` como dependency overridable.
+- `FakeLLMProvider` en `conftest.py` para tests sin llamadas reales.
+- Tests unitarios del prompt builder (10 casos) e integración del chat (9 casos): ANSWERED con fuentes, NO_INFO sin chunks, autenticación, creación de conversación, listado, detalle, 404 y aislamiento por organización.
+- Política de "no información": si no hay chunks válidos, se responde `NO_INFO` sin llamar al LLM.
+- Defensas anti prompt injection: delimitación XML del contexto, separación de roles, regla explícita en el prompt de no obedecer instrucciones dentro de documentos.
+
+---
+
+## 3. Entregado en la Etapa 5
 
 - Modelo `DocumentChunk` con FK compuesta `(organization_id, document_id)`, `UNIQUE(document_id, chunk_index)`, CHECK constraints, columna `embedding vector(N)` y `metadata JSONB`.
 - Migración `0004_document_chunks_y_pgvector` con tabla completa, índice HNSW `vector_cosine_ops` y todos los índices de filtrado.
@@ -58,10 +77,10 @@ Punto único de reanudación. Actualizar al cerrar cada etapa.
 
 Última ejecución con Docker activo (2026-11-11):
 
-- **Tests:** 142 pasando (100 %). Incluye 10 unitarios del chunker, 7 de búsqueda semántica, 16 de processing con embeddings, y todos los tests de auth, documentos, y aislamiento multi-tenant.
-- **Cobertura:** 87 % total. `app/document_processing` al 100 %, `app/rag/chunker.py` al 99 %, `app/repositories/document_chunk_repository.py` al 100 %, `app/api/routes/search.py` al 100 %.
+- **Tests:** 163 pasando (0 fallando). Incluye 10 unitarios del prompt builder, 9 de integración del chat, 10 del chunker, 7 de búsqueda, y los tests de las etapas 1-4.
+- **Cobertura:** 86 % total. `app/rag/prompt_builder.py` al 100 %, `app/services/rag_service.py` al 89 %, `app/document_processing` al 100 %.
 - **Ruff:** sin errores en todo el código base.
-- **Migraciones:** 4 migraciones aplicadas (`0001`-`0004`), incluyendo `document_chunks` con índice HNSW.
+- **Migraciones:** 5 migraciones (`0001`-`0005`), incluyendo `conversations`, `messages`, `message_sources`.
 - **Docker:** contenedor `smartdocs-db` corriendo con PostgreSQL + pgvector activo.
 
 Comandos de referencia:
@@ -105,23 +124,24 @@ curl http://localhost:8000/health
 - Las migraciones se ejecutan manualmente; el entrypoint automático queda como decisión futura.
 - La suite de tests crea el esquema con `create_all`/`drop_all`; las migraciones se verifican por separado (ADR-016).
 - Rate limiting y protección contra fuerza bruta quedan para una etapa posterior.
-- No existen aún conversaciones, motor RAG, proxy TLS ni frontend.
+- El motor RAG y las conversaciones están implementados y verificados (Etapa 6). Faltan proxy TLS y frontend.
+- Los modelos `Message.role` y `Message.status` se almacenan como `String(20)` en lugar de enum de PostgreSQL para simplificar la migración; el código de la API maneja ambos casos (enum y string).
 - El umbral `min_score` se dejó en 0.35 como valor inicial; la calibración con dataset dorado se hace en la Etapa 9.
+- La calibración del umbral con dataset dorado (ROADMAP §5.4) queda pendiente hasta que existan documentos reales.
 
 ---
 
-## 7. Próximo paso: Etapa 6 — Motor RAG
+## 7. Próximo paso: Etapa 7 — Frontend
 
-1. Definir interfaz `LLMProvider` e implementar `GeminiLLMProvider`.
-2. Construir el contexto con pregunta, fragmentos, metadatos e instrucciones.
-3. Diseñar y versionar el prompt del sistema.
-4. Implementar endpoint `POST /api/v1/conversations` y `POST /api/v1/conversations/{id}/messages`.
-5. Política de "no información" cuando no hay contexto válido.
-6. Validación de salida: fuentes existentes, formato, longitud.
+1. Scaffolding del proyecto React + TypeScript + Vite.
+2. Integrar login, logout y refresh automático.
+3. Dashboard con métricas de documentos y consultas.
+4. Gestión documental: subida, listado, estados.
+5. Chat conversacional con historial y fuentes.
 
 ---
 
-## 7. Documentos de referencia
+## 8. Documentos de referencia
 
 - [`../README.md`](../README.md) — visión general y puesta en marcha.
 - [`../ROADMAP.md`](../ROADMAP.md) — plan completo y checklists.

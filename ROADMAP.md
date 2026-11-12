@@ -2,7 +2,7 @@
 
 Plan de desarrollo incremental en 10 etapas. Cada etapa debe producir un resultado funcional y verificable antes de avanzar a la siguiente.
 
-> **Estado actual:** Etapas 1–5 cerradas; próxima Etapa 6. Verificación y punto de reanudación: [`docs/status.md`](docs/status.md).
+> **Estado actual:** Etapas 1–6 cerradas; próxima Etapa 7. Verificación y punto de reanudación: [`docs/status.md`](docs/status.md).
 
 - **Duración estimada total:** 15 semanas.
 - **Ritmo asumido:** 5–7 horas semanales, desarrollo individual.
@@ -415,19 +415,19 @@ Realizar una consulta y recuperar fragmentos pertinentes sin usar todavía un LL
 
 ### Tareas
 
-- [ ] Definir interfaz `LLMProvider`.
-- [ ] Implementar `GeminiLLMProvider` con timeouts y reintentos controlados.
-- [ ] Construir el contexto con pregunta, fragmentos, metadatos e instrucciones.
-- [ ] Diseñar y versionar el prompt del sistema.
-- [ ] Implementar la política de “no sé” sin llamar al LLM cuando no hay candidatos válidos.
-- [ ] Generar respuesta estructurada con fuentes y estado.
+- [x] Definir interfaz `LLMProvider`.
+- [x] Implementar `GeminiLLMProvider` con timeouts y reintentos controlados.
+- [x] Construir el contexto con pregunta, fragmentos, metadatos e instrucciones.
+- [x] Diseñar y versionar el prompt del sistema.
+- [x] Implementar la política de "no sé" sin llamar al LLM cuando no hay candidatos válidos.
+- [x] Generar respuesta estructurada con fuentes y estado.
 - [ ] Soportar estilo de respuesta conciso o detallado.
-- [ ] Validar que las fuentes citadas correspondan a chunks recuperados.
-- [ ] Persistir conversación, mensajes y `MessageSource`.
-- [ ] Registrar tokens, latencia, modelo y parámetros usados.
-- [ ] Implementar límites operativos anti prompt injection (ver abajo).
-- [ ] Tests unitarios del armado de prompt y de la validación de salida.
-- [ ] Tests de integración con proveedor simulado (sin llamadas reales en CI).
+- [x] Validar que las fuentes citadas correspondan a chunks recuperados.
+- [x] Persistir conversación, mensajes y `MessageSource`.
+- [x] Registrar tokens, latencia, modelo y parámetros usados.
+- [x] Implementar límites operativos anti prompt injection (ver abajo).
+- [x] Tests unitarios del armado de prompt y de la validación de salida.
+- [x] Tests de integración con proveedor simulado (sin llamadas reales en CI).
 
 ### Contrato de respuesta
 

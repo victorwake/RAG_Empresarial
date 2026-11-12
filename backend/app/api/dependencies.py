@@ -19,6 +19,8 @@ from app.models.enums import UserRole
 from app.models.user import User
 from app.rag.embedding_provider import EmbeddingProvider
 from app.rag.gemini_embedding import GeminiEmbeddingProvider
+from app.rag.gemini_llm import GeminiLLMProvider
+from app.rag.llm_provider import LLMProvider
 from app.repositories.user_repository import UserRepository
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -84,3 +86,10 @@ def get_embedding_provider(
 ) -> EmbeddingProvider:
     """Proveedor de embeddings — overridable en tests."""
     return GeminiEmbeddingProvider.from_settings(settings)
+
+
+def get_llm_provider(
+    settings: Settings = Depends(get_settings)
+) -> LLMProvider:
+    """Proveedor de LLM — overridable en tests."""
+    return GeminiLLMProvider.from_settings(settings)
