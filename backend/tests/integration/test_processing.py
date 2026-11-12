@@ -31,6 +31,7 @@ from app.services.processing_service import (
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from tests.conftest import (
+    FakeEmbeddingProvider,
     build_docx_bytes,
     build_pdf_bytes,
     build_scanned_pdf_bytes,
@@ -92,7 +93,9 @@ async def test_run_job_completes_document(
         ),
     )
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=document.id, job_id=job.id)
 
@@ -116,7 +119,9 @@ async def test_run_job_is_idempotent_for_completed_job(
         content=build_pdf_bytes("Informe tecnico de la organizacion."),
     )
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=document.id, job_id=job.id)
     await service.run_job(document_id=document.id, job_id=job.id)
@@ -128,7 +133,9 @@ async def test_run_job_is_idempotent_for_completed_job(
 async def test_run_job_ignores_unknown_job(
     db_session: AsyncSession, tmp_path
 ) -> None:
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=uuid.uuid4(), job_id=uuid.uuid4())
 
@@ -138,7 +145,9 @@ async def test_run_job_fails_when_document_is_missing(
 ) -> None:
     document = await create_document(db_session, org_a, admin_a)
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=uuid.uuid4(), job_id=job.id)
 
@@ -153,7 +162,9 @@ async def test_run_job_fails_when_file_is_missing(
         db_session, org_a, admin_a, storage_path=f"{org_a.id}/{uuid.uuid4()}.pdf"
     )
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=document.id, job_id=job.id)
 
@@ -175,7 +186,9 @@ async def test_run_job_fails_when_file_is_empty(
         content=build_pdf_bytes("Informe tecnico de la organizacion."),
     )
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, storage)
+    service = ProcessingService(
+        db_session, storage, embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=document.id, job_id=job.id)
 
@@ -199,7 +212,9 @@ async def test_run_job_extracts_docx_document(
         mime_type=DOCX_MIME_TYPE,
     )
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=document.id, job_id=job.id)
 
@@ -222,7 +237,9 @@ async def test_run_job_extracts_txt_document(
         mime_type="text/plain",
     )
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=document.id, job_id=job.id)
 
@@ -243,7 +260,9 @@ async def test_run_job_fails_when_pdf_has_no_text(
         content=build_scanned_pdf_bytes(page_count=3),
     )
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=document.id, job_id=job.id)
 
@@ -263,7 +282,9 @@ async def test_run_job_fails_when_pdf_is_corrupt(
         content=b"%PDF-1.7 archivo corrupto truncado",
     )
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=document.id, job_id=job.id)
 
@@ -283,6 +304,7 @@ async def test_run_job_completes_with_extraction_warnings(
         db_session,
         LocalFileStorage(tmp_path),
         extractors=(_ExtractorConAdvertencias(),),
+        embedding_provider=FakeEmbeddingProvider(),
     )
 
     await service.run_job(document_id=document.id, job_id=job.id)
@@ -305,7 +327,9 @@ async def test_run_job_fails_when_mime_type_is_unsupported(
         mime_type="application/x-otro",
     )
     job = await create_processing_job(db_session, document)
-    service = ProcessingService(db_session, LocalFileStorage(tmp_path))
+    service = ProcessingService(
+        db_session, LocalFileStorage(tmp_path), embedding_provider=FakeEmbeddingProvider()
+    )
 
     await service.run_job(document_id=document.id, job_id=job.id)
 
@@ -397,6 +421,14 @@ async def test_run_processing_job_entry_point_completes_document(
 
     monkeypatch.setattr(processing_service, "session_scope", _fake_session_scope)
     monkeypatch.setattr(processing_service, "LocalFileStorage", lambda root: storage)
+
+    class FakeGeminiEmbeddingProvider:
+        """Wrapper para simular GeminiEmbeddingProvider con from_settings."""
+        @classmethod
+        def from_settings(cls, settings=None):
+            return FakeEmbeddingProvider()
+
+    monkeypatch.setattr(processing_service, "GeminiEmbeddingProvider", FakeGeminiEmbeddingProvider)
     await run_processing_job(document.id, job.id)
 
     document_id = document.id

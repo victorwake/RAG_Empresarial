@@ -2,7 +2,7 @@
 
 Plan de desarrollo incremental en 10 etapas. Cada etapa debe producir un resultado funcional y verificable antes de avanzar a la siguiente.
 
-> **Estado actual:** Etapas 1–4 cerradas; próxima Etapa 5. Verificación y punto de reanudación: [`docs/status.md`](docs/status.md).
+> **Estado actual:** Etapas 1–5 cerradas; próxima Etapa 6. Verificación y punto de reanudación: [`docs/status.md`](docs/status.md).
 
 - **Duración estimada total:** 15 semanas.
 - **Ritmo asumido:** 5–7 horas semanales, desarrollo individual.
@@ -353,35 +353,35 @@ Esta es una de las etapas más importantes. Las decisiones de calidad se toman c
 
 ### 5.1. Chunking
 
-- [ ] Implementar división por tokens con overlap.
-- [ ] Parámetros iniciales **configurables**: tamaño 500 tokens, overlap 75 tokens.
-- [ ] Conservar `document_id`, `chunk_index`, `page_number` y metadatos.
-- [ ] Evitar chunks vacíos o duplicados exactos.
-- [ ] Documentar el tokenizador usado y su relación con el modelo de embeddings.
+- [x] Implementar división por tokens con overlap.
+- [x] Parámetros iniciales **configurables**: tamaño 500 tokens, overlap 75 tokens.
+- [x] Conservar `document_id`, `chunk_index`, `page_number` y metadatos.
+- [x] Evitar chunks vacíos o duplicados exactos.
+- [x] Documentar el tokenizador usado y su relación con el modelo de embeddings.
 
 ### 5.2. Embeddings
 
-- [ ] Definir interfaz `EmbeddingProvider`.
-- [ ] Implementar proveedor Gemini por defecto.
-- [ ] Generar embeddings en lotes con reintentos y backoff exponencial.
-- [ ] Validar dimensión contra la configuración.
-- [ ] Registrar `embedding_model` y dimensión junto a cada chunk.
-- [ ] Evitar regenerar embeddings si el contenido y el modelo no cambiaron.
+- [x] Definir interfaz `EmbeddingProvider`.
+- [x] Implementar proveedor Gemini por defecto.
+- [x] Generar embeddings en lotes con reintentos y backoff exponencial.
+- [x] Validar dimensión contra la configuración.
+- [x] Registrar `embedding_model` y dimensión junto a cada chunk.
+- [x] Evitar regenerar embeddings si el contenido y el modelo no cambiaron.
 
 ### 5.3. Almacenamiento vectorial
 
-- [ ] Crear entidad `DocumentChunk` con columna `vector(N)`.
-- [ ] Crear índice ANN (HNSW o IVFFlat) y evaluar parámetros.
-- [ ] Documentar que cambiar modelo o dimensión requiere migración y reindexación.
+- [x] Crear entidad `DocumentChunk` con columna `vector(N)`.
+- [x] Crear índice ANN (HNSW) y evaluar parámetros.
+- [x] Documentar que cambiar modelo o dimensión requiere migración y reindexación.
 
 ### 5.4. Búsqueda semántica
 
-- [ ] Generar embedding de la consulta.
-- [ ] Buscar por similitud coseno con `top_k` configurable.
-- [ ] Aplicar filtros obligatorios por `organization_id` y, opcionalmente, por documento(s).
-- [ ] Implementar `min_score` configurable.
-- [ ] Distinguir tres casos: sin candidatos, candidatos bajo umbral, candidatos válidos.
-- [ ] Registrar scores y parámetros usados para diagnóstico.
+- [x] Generar embedding de la consulta.
+- [x] Buscar por similitud coseno con `top_k` configurable.
+- [x] Aplicar filtros obligatorios por `organization_id` y, opcionalmente, por documento(s).
+- [x] Implementar `min_score` configurable.
+- [x] Distinguir tres casos: sin candidatos, candidatos bajo umbral, candidatos válidos.
+- [x] Registrar scores y parámetros usados para diagnóstico.
 
 ### Calibración del umbral (obligatoria antes de cerrar la etapa)
 

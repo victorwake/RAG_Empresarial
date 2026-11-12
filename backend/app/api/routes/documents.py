@@ -22,8 +22,12 @@ from app.core.context import TenantContext
 from app.interfaces.queue import ProcessingQueue
 from app.interfaces.storage import FileStorage
 from app.models.enums import DocumentStatus
+from app.repositories.document_chunk_repository import DocumentChunkRepository
+from app.schemas.chunk import ChunkListResponse, ChunkResponse
 from app.schemas.document import DocumentListResponse, DocumentResponse
 from app.services.document_service import DocumentService
+
+NOT_FOUND_DETAIL = "El documento solicitado no existe."
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -158,3 +162,30 @@ async def _stream_file(file: BinaryIO) -> AsyncIterator[bytes]:
             yield chunk
     finally:
         await asyncio.to_thread(file.close)
+
+
+@router.get("/{document_id}/chunks", response_model=ChunkListResponse)
+async def list_chunks(
+    document_id: uuid.UUID,
+    context: TenantContext = Depends(require_admin),
+    session: AsyncSession = Depends(get_db),
+    storage: FileStorage = Depends(get_file_storage),
+    queue: ProcessingQueue = Depends(get_processing_queue),
+    settings: Settings = Depends(get_settings),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> ChunkListResponse:
+    """Lista los fragmentos generados para un documento (uso diagnóstico)."""
+    service = _service(session, storage=storage, queue=queue, settings=settings)
+    await service.get_document(context=context, document_id=document_id)
+
+    repo = DocumentChunkRepository(session)
+    chunks, total = await repo.list_by_document(
+        document_id=document_id, limit=limit, offset=offset
+    )
+    return ChunkListResponse(
+        items=[ChunkResponse.model_validate(chunk) for chunk in chunks],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )

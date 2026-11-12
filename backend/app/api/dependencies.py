@@ -17,6 +17,8 @@ from app.interfaces.queue import FastAPIProcessingQueue, ProcessingQueue
 from app.interfaces.storage import FileStorage, LocalFileStorage
 from app.models.enums import UserRole
 from app.models.user import User
+from app.rag.embedding_provider import EmbeddingProvider
+from app.rag.gemini_embedding import GeminiEmbeddingProvider
 from app.repositories.user_repository import UserRepository
 
 _bearer_scheme = HTTPBearer(auto_error=False)
@@ -75,3 +77,10 @@ def require_admin(context: TenantContext = Depends(get_tenant_context)) -> Tenan
     if context.role != UserRole.ADMIN:
         raise ForbiddenError("Se requiere rol ADMIN.")
     return context
+
+
+def get_embedding_provider(
+    settings: Settings = Depends(get_settings)
+) -> EmbeddingProvider:
+    """Proveedor de embeddings — overridable en tests."""
+    return GeminiEmbeddingProvider.from_settings(settings)

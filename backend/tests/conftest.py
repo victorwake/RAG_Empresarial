@@ -23,7 +23,12 @@ import app.models  # noqa: F401  (registra los modelos en el metadata)
 import pymupdf
 import pytest
 import pytest_asyncio
-from app.api.dependencies import get_db, get_file_storage, get_processing_queue
+from app.api.dependencies import (
+    get_db,
+    get_embedding_provider,
+    get_file_storage,
+    get_processing_queue,
+)
 from app.core.config import Settings, get_settings
 from app.core.security import create_access_token, hash_password
 from app.database.base import Base
@@ -42,6 +47,7 @@ from app.repositories.user_repository import UserRepository
 from docx import Document as DocxDocument
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from pgvector.asyncpg import register_vector
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -88,6 +94,52 @@ DOCX_BYTES = build_docx_bytes("Contenido simulado de un archivo DOCX para las pr
 TXT_BYTES = b"Contenido de texto plano simulado."
 
 
+class FakeEmbeddingProvider:
+    """Proveedor falso que genera vectores deterministas para tests."""
+
+    def __init__(self, dimension: int = 768) -> None:
+        self._dimension = dimension
+        self._call_count = 0
+
+    @property
+    def model_name(self) -> str:
+        return "fake-test-model"
+
+    @property
+    def dimension(self) -> int:
+        return self._dimension
+
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        self._call_count += 1
+        return [self._hash_to_vector(t) for t in texts]
+
+    async def embed_query(self, text: str) -> list[float]:
+        self._call_count += 1
+        return self._hash_to_vector(text)
+
+    def _hash_to_vector(self, text: str) -> list[float]:
+        """Convierte un texto en un vector determinista de dimensión fija."""
+        import hashlib
+
+        h = hashlib.sha256(text.encode("utf-8")).digest()
+        # Generar valores float a partir del hash
+        values: list[float] = []
+        for i in range(0, len(h), 4):
+            chunk = int.from_bytes(h[i : i + 4], "little")
+            values.append((chunk % 10000) / 10000.0)
+        # Rellenar hasta la dimensión requerida con hashes extendidos
+        while len(values) < self._dimension:
+            ext = hashlib.sha256(
+                h + str(len(values)).encode()
+            ).digest()
+            for i in range(0, len(ext), 4):
+                if len(values) >= self._dimension:
+                    break
+                chunk = int.from_bytes(ext[i : i + 4], "little")
+                values.append((chunk % 10000) / 10000.0)
+        return values[: self._dimension]
+
+
 class FakeProcessingQueue:
     """Cola falsa: registra los encolados sin ejecutar trabajos."""
 
@@ -106,6 +158,7 @@ async def _reset_schema() -> None:
     engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
     async with engine.begin() as connection:
         await connection.execute(text("CREATE EXTENSION IF NOT EXISTS citext"))
+        await connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await connection.run_sync(Base.metadata.drop_all)
         await connection.run_sync(Base.metadata.create_all)
     await engine.dispose()
@@ -123,6 +176,10 @@ async def db_session() -> AsyncIterator[AsyncSession]:
     engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
     connection = await engine.connect()
     transaction = await connection.begin()
+
+    # Registrar los tipos de pgvector ejecutando un comando SQL que los activa
+    await connection.execute(text("SELECT '00000000-0000-0000-0000-000000000000'::uuid"))
+
     session = AsyncSession(
         bind=connection,
         expire_on_commit=False,
@@ -152,6 +209,7 @@ def _build_application(
     application.dependency_overrides[get_db] = _override_get_db
     application.dependency_overrides[get_file_storage] = lambda: storage
     application.dependency_overrides[get_processing_queue] = lambda: queue
+    application.dependency_overrides[get_embedding_provider] = lambda: FakeEmbeddingProvider()
     if settings is not None:
         application.dependency_overrides[get_settings] = lambda: settings
     return application

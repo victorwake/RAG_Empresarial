@@ -1,6 +1,7 @@
 """Registro central de modelos para que Alembic los descubra."""
 
 from app.models.document import Document
+from app.models.document_chunk import DocumentChunk
 from app.models.enums import (
     DocumentStatus,
     JobStatus,
@@ -16,6 +17,7 @@ from app.models.user import User
 
 __all__ = [
     "Document",
+    "DocumentChunk",
     "DocumentStatus",
     "JobStatus",
     "JobType",

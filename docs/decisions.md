@@ -29,6 +29,10 @@ Registro de decisiones estructurales, su contexto, consecuencias y estado.
 | [ADR-015](#adr-015-login-con-organization_slug-y-claves-foráneas-compuestas) | Login con `organization_slug` y claves foráneas compuestas | Aceptada |
 | [ADR-016](#adr-016-esquema-de-tests-con-create_all-y-migraciones-verificadas-aparte) | Esquema de tests con `create_all` y migraciones verificadas aparte | Aceptada |
 | [ADR-017](#adr-017-job-de-ingesta-con-stub-de-extracción-en-etapa-3) | Job de ingesta con stub de extracción en Etapa 3 | Aceptada |
+| [ADR-018](#adr-018-extractores-síncronos-y-texto-extraído-no-persistido) | Extractores síncronos y texto extraído no persistido | Aceptada |
+| [ADR-019](#adr-019-chunking-por-párrafos-con-tokenización-aproximada) | Chunking por párrafos con tokenización aproximada | Aceptada |
+| [ADR-020](#adr-020-hnsw-para-búsqueda-vectorial) | HNSW para búsqueda vectorial | Aceptada |
+| [ADR-021](#adr-021-umbral-min_score-configurable-sin-calibración-inicial) | Umbral `min_score` configurable sin calibración inicial | Aceptada |
 
 ---
 
@@ -521,9 +525,8 @@ La Etapa 4 implementa la extracción real de PDF/DOCX/TXT. Las bibliotecas elegi
 **Decisión:**
 
 - `TextExtractor` es un Protocol **síncrono** que recibe `bytes` y devuelve `ExtractionResult`; `ProcessingService` lo ejecuta con `asyncio.to_thread` para no bloquear el event loop.
-- El texto extraído es **transitorio**: no se persiste. Al reprocesar se re-extrae del archivo original.
+- El texto extraído se persiste como `DocumentChunk` con embedding (resuelto en Etapa 5, ADR-019). Al reprocesar se eliminan los chunks previos y se regeneran.
 - `documents.page_count` se completa al procesar; los metadatos y advertencias de extracción se registran en logs, no en la base.
-- Los chunks de la Etapa 5 serán la única representación persistida del contenido.
 
 **Consecuencias:**
 
@@ -535,6 +538,90 @@ La Etapa 4 implementa la extracción real de PDF/DOCX/TXT. Las bibliotecas elegi
 
 - Definir `TextExtractor` async: obligaría a envolver bibliotecas síncronas en `asyncio.to_thread` dentro de cada extractor, repitiendo el patrón.
 - Persistir el texto extraído en `documents`: duplica el almacenamiento frente a los chunks y crea dos fuentes de verdad del contenido.
+
+---
+
+## ADR-019: Chunking por párrafos con tokenización aproximada
+
+**Estado:** Aceptada.
+
+**Contexto:**
+
+La Etapa 5 requiere dividir el texto extraído en chunks de tamaño controlado para generar embeddings. Un tokenizador exacto del modelo de embeddings (p. ej. el tokenizer de Gemini) requeriría una dependencia adicional y agrega latencia.
+
+**Decisión:**
+
+- Dividir el texto en párrafos (separados por `\n\n`) como unidades atómicas.
+- Estimar tokens como `len(text) // 4` (aproximación BPE clásica).
+- Agrupar párrafos hasta alcanzar `chunk_size_tokens`, con `overlap` de párrafos entre chunks consecutivos.
+- No cortar párrafos a la mitad; si un párrafo solo excede el límite, se emite como chunk individual.
+
+**Consecuencias:**
+
+- Los chunks respetan límites naturales del texto, mejorando la coherencia semántica.
+- La estimación de tokens puede diferir del conteo real del modelo; el impacto es mínimo para chunking.
+- No se requiere dependencia de tokenizador externo.
+- Si la precisión del conteo se vuelve crítica, se puede reemplazar por `tiktoken` o el tokenizer de Gemini sin cambiar la interfaz.
+
+**Alternativas consideradas:**
+
+- Tokenizador exacto (`tiktoken`): más preciso, pero agrega dependencia y complejidad.
+- División por caracteres fijos: más simple, pero corta palabras y párrafos arbitrariamente.
+- SentenceTransformers `SemanticChunker`: excelente calidad, pero pesado y lento para el MVP.
+
+---
+
+## ADR-020: HNSW para búsqueda vectorial
+
+**Estado:** Aceptada.
+
+**Contexto:**
+
+pgvector ofrece dos índices ANN: HNSW e IVFFlat. HNSW tiene mayor precisión y latencia más baja, pero consume más memoria y tiempo de construcción. IVFFlat es más rápido de construir pero menos preciso.
+
+**Decisión:**
+
+- Usar HNSW con `vector_cosine_ops` para el índice de `document_chunks.embedding`.
+- Los parámetros M y ef_construction usan los valores por defecto de pgvector.
+- El filtro por `organization_id` se aplica en el `WHERE`, no en el índice.
+
+**Consecuencias:**
+
+- Búsqueda rápida y precisa para volúmenes de MVP (miles a decenas de miles de chunks).
+- La construcción del índice es más lenta con volúmenes grandes; se puede crear después de la carga inicial si es necesario.
+- Con múltiples organizaciones, HNSW puede devolver candidatos de otras organizaciones que luego se filtran; evaluar `iterative_scan` si el rendimiento lo requiere.
+
+**Alternativas consideradas:**
+
+- IVFFlat: menor precisión, útil para volúmenes muy grandes con recursos limitados.
+- Búsqueda lineal: aceptable solo para prototipos con pocos chunks.
+
+---
+
+## ADR-021: Umbral `min_score` configurable sin calibración inicial
+
+**Estado:** Aceptada.
+
+**Contexto:**
+
+La similitud coseno depende del modelo de embeddings y del corpus. Fijar un umbral sin evidencia puede producir falsos positivos o falsos negativos. Sin embargo, la Etapa 5 debe cerrar con un valor funcional.
+
+**Decisión:**
+
+- Dejar `min_score` configurable en `Settings` con valor inicial 0.35.
+- El valor se calibrará formalmente en la Etapa 9 con dataset dorado.
+- La API de búsqueda respeta `top_k` y `min_score` y distingue tres estados: `ANSWERED`, `NO_INFO` (sin candidatos o bajo umbral).
+
+**Consecuencias:**
+
+- El sistema es funcional desde la Etapa 5 con un umbral razonable.
+- La calibración formal en Etapa 9 ajustará el valor con evidencia.
+- El umbral se puede ajustar por entorno sin cambiar código.
+
+**Alternativas consideradas:**
+
+- Calibrar en Etapa 5: requiere dataset dorado y documentos reales, que aún no existen.
+- Sin umbral: devolvería siempre resultados, incluso irrelevantes.
 
 ---
 
